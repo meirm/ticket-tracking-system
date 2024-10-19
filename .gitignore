@@ -12,4 +12,4 @@ venv/
 .env
 
 # Ignore migrations across all apps
-**/migrations/
+**/migrations/*_*.py
