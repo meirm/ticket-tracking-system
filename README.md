@@ -33,10 +33,21 @@ pip install -r requirements.txt
 
 python manage.py migrate
 
+    4. Create a superuser:
 
-	4.	Run the Development Server:
+python manage.py createsuperuser
+
+    5.	Run the Development Server:
 
 python manage.py runserver
+
+    6. Login to the admin panel and create a few users
+
+    7. Create a group to assign permissions to create and edit tickets.
+
+    8. Assign the group to the users.    
+
+	
 
 
 	5.	Access the Application:
