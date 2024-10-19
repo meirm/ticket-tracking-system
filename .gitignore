@@ -1,0 +1,15 @@
+postgres_data/
+db.sqlite3
+*.swp
+# Django specific files
+*.pyc
+__pycache__/
+db.sqlite3
+*.log
+
+# Ignore virtual environments
+venv/
+.env
+
+# Ignore migrations across all apps
+**/migrations/

@@ -1,0 +1,7 @@
+.git/
+.env
+__pycache__/
+*.pyc
+**/migrations/
+postgres_data/
+db.sqlite3

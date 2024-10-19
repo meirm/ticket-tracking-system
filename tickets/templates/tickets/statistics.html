@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Ticket Statistics</h1>
+
+    <!-- Average Resolution Time -->
+    <div class="mb-4">
+        <h2>Average Resolution Time</h2>
+        <p>{{ avg_resolution_time|default:"No data available" }}</p>
+    </div>
+
+    <!-- Resolved Tickets Summary -->
+    <div class="mb-4">
+        <h2>Resolved Tickets</h2>
+        <p>Before Due Date: {{ resolved_before|default:"No data available" }}</p>
+        <p>After Due Date: {{ over_due|default:"No data available" }}</p>
+    </div>
+
+    <!-- Open Tickets Assigned to Users -->
+    {% if open_tickets_assignee_to_users %}
+    <div class="mb-4">
+        <h2>Open Tickets Assigned to Users</h2>
+        <table class="table table-striped table-bordered">
+            <thead class="thead-light">
+                <tr>
+                    <th>User</th>
+                    <th>Total Tickets</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in open_tickets_assignee_to_users %}
+                <tr>
+                    <td>{{ entry.assignee__username }}</td>
+                    <td>{{ entry.total_tickets }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p>No open tickets assignee to users.</p>
+    {% endif %}
+
+    <!-- Closed Tickets Assigned to Users -->
+    {% if closed_tickets_assignee_to_users %}
+    <div class="mb-4">
+        <h2>Closed Tickets Assigned to Users</h2>
+        <table class="table table-striped table-bordered">
+            <thead class="thead-light">
+                <tr>
+                    <th>User</th>
+                    <th>Total Tickets</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in closed_tickets_assignee_to_users %}
+                <tr>
+                    <td>{{ entry.assignee__username }}</td>
+                    <td>{{ entry.total_tickets }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p>No closed tickets assignee to users.</p>
+    {% endif %}
+
+    <!-- Open Tickets by Category Assigned to Users -->
+    {% if open_tickets_per_user_category %}
+    <div class="mb-4">
+        <h2>Open Tickets by Category Assigned to Users</h2>
+        <table class="table table-striped table-bordered">
+            <thead class="thead-light">
+                <tr>
+                    <th>Category</th>
+                    <th>User</th>
+                    <th>Total Tickets</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in open_tickets_per_user_category %}
+                <tr>
+                    <td>{{ entry.category }}</td>
+                    <td>{{ entry.assignee__username }}</td>
+                    <td>{{ entry.total_tickets }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p>No open tickets categorized by user.</p>
+    {% endif %}
+
+    <!-- Ticket Status Summary -->
+    {% if ticket_status_summary %}
+    <div class="mb-4">
+        <h2>Ticket Status Summary</h2>
+        <table class="table table-striped table-bordered">
+            <thead class="thead-light">
+                <tr>
+                    <th>Status</th>
+                    <th>Count</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for status in ticket_status_summary %}
+                <tr>
+                    <td>{{ status.status }}</td>
+                    <td>{{ status.count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p>No ticket status summary available.</p>
+    {% endif %}
+
+    <!-- Ticket Priority Summary -->
+    {% if priority_summary %}
+    <div class="mb-4">
+        <h2>Ticket Priority Summary</h2>
+        <table class="table table-striped table-bordered">
+            <thead class="thead-light">
+                <tr>
+                    <th>Priority</th>
+                    <th>Count</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for priority in priority_summary %}
+                <tr>
+                    <td>{{ priority.priority }}</td>
+                    <td>{{ priority.count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p>No ticket priority summary available.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,12 @@
+.notification-tag {
+    display: none;
+    background-color: red;
+    color: white;
+    border-radius: 50%;
+    padding: 5px 10px;
+    font-size: 14px;
+  }
+  
+  .notification-tag.show {
+    display: inline-block; /* Or block, depending on where you place it */
+  }

@@ -1,0 +1,21 @@
+{% load static %}
+<HTML>
+<HEAD>
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <script src="{% static 'js/bootstrap.min.js' %}"></script>
+    <TITLE>{% block title %}TTS{% endblock %}</TITLE>
+</HEAD>
+<BODY>
+    {% include 'messages.html' %}
+    <div class="container">
+        <div id="header">
+            <h1>TTS - Ticket Tracking System</h1>
+        </div>
+
+        <div id="content">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+</BODY>
+</HTML>

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="text-center mb-4">R&D Usage Manual</h1>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <h2>Why Use TTS?</h2>
+            <p>
+                TTS enforces a formal, structured method for managing tasks, feature requests, and bug reports. By tracking all requests through TTS, we prevent the chaos of interrupt-driven workdays and ensure no task gets lost. It provides:
+            </p>
+            <ul class="list-group mb-4">
+                <li class="list-group-item">A <strong>clear process</strong> for submitting and tracking requests.</li>
+                <li class="list-group-item">A <strong>single source of truth</strong> for all ongoing work.</li>
+                <li class="list-group-item">An <strong>automatic to-do list</strong> that ensures nothing falls through the cracks.</li>
+                <li class="list-group-item">A <strong>record</strong> of all tasks, priorities, and deadlines for review and audit.</li>
+            </ul>
+            <p>
+                Using informal methods like direct messaging or emails can lead to tasks being overlooked or forgotten, especially during busy periods. TTS provides structure, accountability, and visibility into all tasks.
+            </p>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <h2>How to Use TTS</h2>
+            <h3>1. Creating a New Ticket</h3>
+            <p>
+                To create a new ticket, click on the "New Ticket" link in the menu and fill in the following fields:
+            </p>
+            <ul class="list-group mb-4">
+                <li class="list-group-item"><strong>Title:</strong> A clear and concise description of the issue or request.</li>
+                <li class="list-group-item"><strong>Description:</strong> Detailed information about the task.</li>
+                <li class="list-group-item"><strong>Priority:</strong> Set the appropriate priority (Low, Medium, High).</li>
+                <li class="list-group-item"><strong>Category:</strong> Choose the category (Bug, Feature, Support).</li>
+                <li class="list-group-item"><strong>Assigned:</strong> Assign the ticket to a team member.</li>
+                <li class="list-group-item"><strong>Due Date:</strong> Set a deadline if applicable.</li>
+            </ul>
+            <p>
+                Once submitted, the ticket will appear in the <strong>My Tasks</strong> and <strong>List</strong> views.
+            </p>
+
+            <h3>2. Updating or Closing a Ticket</h3>
+            <p>
+                To update or close a ticket:
+            </p>
+            <ul class="list-group mb-4">
+                <li class="list-group-item">Navigate to the ticket you wish to update.</li>
+                <li class="list-group-item">Update the <strong>Status</strong> (In Progress, Resolved, Closed, etc.).</li>
+                <li class="list-group-item">Add any relevant <strong>comments</strong> to keep track of discussions or decisions.</li>
+                <li class="list-group-item">When a task is completed, mark the ticket as <strong>Closed</strong>.</li>
+            </ul>
+
+            <h3>3. Commenting on a Ticket</h3>
+            <p>
+                Scroll down to the comments section of the ticket to add comments. You can also upvote or downvote existing comments to highlight important updates or suggestions.
+            </p>
+
+            <h3>4. Tracking Activity and Searching</h3>
+            <p>
+                Use the <strong>List</strong> view to track all open and closed tickets. You can search for tickets by keywords, assignees, or status. The <strong>Activity Log</strong> provides a historical record of all actions taken on tickets.
+            </p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <h2>Guidelines for R&D Team</h2>
+            <ul class="list-group mb-4">
+                <li class="list-group-item">Always <strong>create tickets</strong> for new tasks, bugs, or features. Avoid using side channels like direct messaging to manage work.</li>
+                <li class="list-group-item"><strong>Regularly check your assignee tickets</strong> in the <strong>My Tasks</strong> view. Keep statuses updated to reflect your progress.</li>
+                <li class="list-group-item">Provide detailed <strong>descriptions</strong> and <strong>comments</strong> to keep team members informed.</li>
+                <li class="list-group-item"><strong>Prioritize tickets</strong> based on impact. Use priority levels wisely to focus on what matters most.</li>
+                <li class="list-group-item">Promptly <strong>close tickets</strong> when tasks are completed to maintain an accurate project overview.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <h2>Benefits of Enforcing TTS Usage</h2>
+            <ul class="list-group mb-4">
+                <li class="list-group-item"><strong>Improved Focus:</strong> Managing all tasks in one place prevents interruptions and distractions.</li>
+                <li class="list-group-item"><strong>Better Collaboration:</strong> Everyone can see what's happening, making it easier to assist team members when needed.</li>
+                <li class="list-group-item"><strong>Accountability:</strong> Tasks are assignee to specific team members with clear priorities and deadlines.</li>
+                <li class="list-group-item"><strong>History of Work:</strong> TTS keeps a complete log of all tasks and decisions, ensuring that nothing is forgotten.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

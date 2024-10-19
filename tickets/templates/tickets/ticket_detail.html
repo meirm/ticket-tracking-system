@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between">
+            <h5>#{{ ticket.id }} - {{ ticket.title }}</h5>
+            <div>
+                <a href="{% url 'index' %}" class="btn btn-sm btn-outline-primary me-2">Back to List</a>
+                <a href="{% url 'edit_ticket' ticket.id %}" class="btn btn-sm btn-outline-secondary me-2">Edit</a>
+                {% if ticket.hidden %}
+                <a href="{% url 'unhide_ticket' ticket.id %}" class="btn btn-sm btn-outline-warning">Unhide</a>
+                {% else %}
+                <a href="{% url 'hide_ticket' ticket.id %}" class="btn btn-sm btn-outline-warning">Hide</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card-body">
+            <h6 class="card-subtitle mb-2 text-muted">Details</h6>
+            <p><strong>Category:</strong> {{ ticket.category }}</p>
+            <p><strong>Description:</strong></p><textarea class="form-control" rows="10" readonly>{{ ticket.description }}</textarea>
+            <p><strong>Assigned to:</strong> {{ ticket.assignee }}</p>
+            <p><strong>Priority:</strong> {{ ticket.priority }}</p>
+            <p><strong>Status:</strong> {{ ticket.status }}</p>
+        </div>
+
+        <div class="card-footer text-muted">
+            <div>
+                <strong>Created by:</strong> {{ ticket.issuer }} <br>
+                <strong>Created at:</strong> {{ ticket.created_at }} <br>
+                <strong>Last updated:</strong> {{ ticket.updated_at }}<br>
+                <strong>Due date:</strong> {{ ticket.due_date }} <br>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a href="{% url 'new_comment' ticket.id %}" class="btn btn-sm btn-primary">New Comment</a>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header">
+            <h6>Comments</h6>
+        </div>
+        <ul class="list-group list-group-flush">
+            {% for comment in comments %}
+            <li class="list-group-item">
+                <strong>@{{ comment.author }}</strong> ({{ comment.created_at }}):<br>
+                <textarea class="form-control" rows="3" readonly>{{ comment.comment }}</textarea>
+            </li>
+            {% empty %}
+            <li class="list-group-item text-muted">No comments yet.</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endblock %}

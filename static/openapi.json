@@ -1,0 +1,230 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+      "title": "Ticket System API",
+      "version": "v1",
+      "description": "API for managing tickets in the ticket system."
+    },
+    "paths": {
+      "/ticket/api/v1/list/": {
+        "get": {
+          "summary": "List Tickets",
+          "operationId": "listTickets",
+          "tags": ["Ticket"],
+          "responses": {
+            "200": {
+              "description": "A list of tickets",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Ticket"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/ticket/api/v1/detail/{ticket_id}/": {
+        "get": {
+          "summary": "Get Ticket Details",
+          "operationId": "getTicketDetail",
+          "tags": ["Ticket"],
+          "parameters": [
+            {
+              "name": "ticket_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Details of a ticket",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Ticket"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/ticket/api/v1/edit/{ticket_id}/": {
+        "put": {
+          "summary": "Edit Ticket",
+          "operationId": "editTicket",
+          "tags": ["Ticket"],
+          "parameters": [
+            {
+              "name": "ticket_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ticket"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Ticket updated successfully",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Ticket"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/ticket/api/v1/create/": {
+        "post": {
+          "summary": "Create Ticket",
+          "operationId": "createTicket",
+          "tags": ["Ticket"],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ticket"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Ticket created successfully",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Ticket"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/ticket/api/v1/add_comment/{ticket_id}/": {
+        "post": {
+          "summary": "Add Comment to Ticket",
+          "operationId": "addComment",
+          "tags": ["Ticket"],
+          "parameters": [
+            {
+              "name": "ticket_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Comment"
+                }
+              }
+            },
+            "responses": {
+              "201": {
+                "description": "Comment added successfully",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/Comment"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "components": {
+      "schemas": {
+        "Ticket": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer"
+            },
+            "issuer": {
+              "type": "string"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "assignee": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "priority": {
+              "type": "string",
+              "enum": ["LOW", "MEDIUM", "HIGH"]
+            },
+            "category": {
+              "type": "string",
+              "enum": ["BUG", "FEATURE", "SUPPORT"]
+            },
+            "due_date": {
+              "type": "string",
+              "format": "date"
+            },
+            "status": {
+              "type": "string",
+              "enum": ["DRAFT", "OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED", "CANCELLED"]
+            }
+          }
+        },
+        "Comment": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer"
+            },
+            "author": {
+              "type": "string"
+            },
+            "ticket_id": {
+              "type": "integer"
+            },
+            "comment": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
