@@ -13,3 +13,4 @@ venv/
 
 # Ignore migrations across all apps
 **/migrations/*_*.py
+data.json
