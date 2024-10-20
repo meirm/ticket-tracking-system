@@ -11,6 +11,10 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,9 +29,9 @@ SECRET_KEY = 'django-insecure-^^%+xm_==0r1@k%wg)p=5p6x1+$(z)f_z)na2egc0a5_ywp+q-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['YOUR_DOMAIN', 'localhost']
+ALLOWED_HOSTS = ['tts.cyborg.fi', 'localhost']
 
-CSRF_TRUSTED_ORIGINS = ['https://YOUR_DOMAIN', 'http://localhost']
+CSRF_TRUSTED_ORIGINS = ['https://tts.cyborg.fi']
 
 
 # Application definition
@@ -39,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'pages',
     'accounts',
     'tickets',
 ]
@@ -75,14 +80,34 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 
 # Database
-# https://docs.djangoproject.com/en/5.1/ref/settings/#databases
+# https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+DB_ENGINE   = os.getenv('DB_ENGINE'   , None)
+DB_USERNAME = os.getenv('DB_USERNAME' , None)
+DB_PASS     = os.getenv('DB_PASS'     , None)
+DB_HOST     = os.getenv('DB_HOST'     , None)
+DB_PORT     = os.getenv('DB_PORT'     , None)
+DB_NAME     = os.getenv('DB_NAME'     , None)
+
+if DB_ENGINE and DB_NAME and DB_USERNAME:
+    DATABASES = { 
+      'default': {
+        'ENGINE'  : 'django.db.backends.' + DB_ENGINE, 
+        'NAME'    : DB_NAME,
+        'USER'    : DB_USERNAME,
+        'PASSWORD': DB_PASS,
+        'HOST'    : DB_HOST,
+        'PORT'    : DB_PORT,
+        }, 
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': 'db.sqlite3',
+        }
+    }
+
 
 
 # Password validation
@@ -131,3 +156,5 @@ STATICFILES_DIRS = [
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
