@@ -19,10 +19,11 @@ from django.urls import path
 from django.urls.conf import include
 from tickets import urls as tickets_urls
 from accounts import urls as accounts_urls
+from pages import urls as pages_urls
 
 urlpatterns = [
-    
+    path('', include(pages_urls)),
     path('accounts/', include(accounts_urls)),
-    path('', include(tickets_urls)),
+    path('tickets/', include(tickets_urls)),
     path('admin/', admin.site.urls),
 ]
