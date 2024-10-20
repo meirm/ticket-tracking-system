@@ -2,3 +2,4 @@ Django==5.1.1
 whitenoise==6.2.0
 python-dateutil
 psycopg2-binary==2.9.10
+python-dotenv
