@@ -14,3 +14,5 @@ venv/
 # Ignore migrations across all apps
 **/migrations/*_*.py
 data.json
+# Ignore all migrations py files besides __init__.py
+**/migrations/00*_*.py

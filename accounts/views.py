@@ -50,10 +50,12 @@ def login_view(request):
 
 @login_required
 def admin_board_view(request):
-    if not request.user.is_superuser:
+    user = request.user
+    
+    if not (user.is_superuser or user.has_perm('accounts.view_activity')):
         log_activity(request.user, 'UNAUTHORIZED ACCESS', level='WARNING', log='Unauthorized access to admin board.')
         messages.error(request, 'You are not authorized to access this page.')
-        return redirect('tickets:index')
+        return redirect('pages:landing_page')
     activities_list = Activity.objects.all().order_by('-created_at')[:10]
     paginator = Paginator(activities_list, 10)
     activities = paginator.get_page(request.GET.get('page'))
