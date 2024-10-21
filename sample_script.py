@@ -15,9 +15,9 @@ logger = logging.getLogger(__name__)
 
 # URL of the login page and API endpoint
 LOGIN_URL = 'http://localhost:8000/accounts/login/'
-TICKETS_API_URL = 'http://localhost:8000/ticket/api/v1/list/?api_key=123456'
+TICKETS_API_URL = 'http://localhost:8000/tickets/api/v1/list/?api_key=123456'
 
-TICKET_EDIT_URL = 'http://localhost:8000/ticket/api/v1/edit/{ticket_id}/?api_key=123456'
+TICKET_EDIT_URL = 'http://localhost:8000/tickets/api/v1/edit/{ticket_id}/?api_key=123456'
 
 
 

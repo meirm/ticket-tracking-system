@@ -18,7 +18,7 @@
         {% for change in changes %}
             <tr>
                 <th>{{ change.id }}</th>
-                <td><a href="{% url 'ticket_detail' change.ticket.id %}">{{ change.ticket.id }}</a></td>
+                <td><a href="{% url 'tickets:ticket_detail' change.ticket.id %}">{{ change.ticket.id }}</a></td>
                 <td>{{ change.actor }}</td>
                 <td>{{ change.log }}</td>
                 <td>{{ change.created_at }}</td>

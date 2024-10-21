@@ -14,6 +14,7 @@
                     <BR>
                         Quoted from Unix, System Administrator's Edition.
                     </p>
+                    <a href="{% url 'tickets:view_help' %}" class="card-link">See our R&D Usage Manual</a>
             </div>
         </div>
     </div>
@@ -26,8 +27,8 @@
                 By keeping track of what you're doing. Using a spreadsheet is limiting and TTS offers an acceptable balance between simplicity and features.
                 By using a this web interface, you can create, update, and close tickets. You can also search for tickets and view the activity log.
                 </p>
-                <a href="{% url 'index' %}" class="card-link">List</a>
-                <a href="{% url 'new_ticket' %}" class="card-link">New Ticket</a>
+                <a href="{% url 'tickets:index' %}" class="card-link">List</a>
+                <a href="{% url 'tickets:new_ticket' %}" class="card-link">New Ticket</a>
             </div>
         </div>
     </div>
@@ -37,9 +38,9 @@
                 <h5 class="card-title">3.</h5>
                 <h6 class="card-subtitle mb-2 text-body-secondary">What?</h6>
                 <p class="card-text">
-                    Take a look at the <a href="{% url 'list_issues' %}">open issues</a> or the <a href="{% url 'list_closed_tickets' %}">closed tickets</a>.
+                    Take a look at the <a href="{% url 'tickets:list_issues' %}">open issues</a> or the <a href="{% url 'tickets:list_closed_tickets' %}">closed tickets</a>.
                     <BR>
-                    Check if there is something on your plate in <a href="{% url 'my_tasks' %}">My tasks</a> or something you can <a href="{% url 'index' %}">help with</a>.
+                    Check if there is something on your plate in <a href="{% url 'tickets:my_tasks' %}">My tasks</a> or something you can <a href="{% url 'tickets:index' %}">help with</a>.
                  </p>
             </div>
         </div>

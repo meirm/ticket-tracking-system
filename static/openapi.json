@@ -6,7 +6,7 @@
       "description": "API for managing tickets in the ticket system."
     },
     "paths": {
-      "/ticket/api/v1/list/": {
+      "/tickets/api/v1/list/": {
         "get": {
           "summary": "List Tickets",
           "operationId": "listTickets",
@@ -28,7 +28,7 @@
           }
         }
       },
-      "/ticket/api/v1/detail/{ticket_id}/": {
+      "/tickets/api/v1/detail/{ticket_id}/": {
         "get": {
           "summary": "Get Ticket Details",
           "operationId": "getTicketDetail",
@@ -57,7 +57,7 @@
           }
         }
       },
-      "/ticket/api/v1/edit/{ticket_id}/": {
+      "/tickets/api/v1/edit/{ticket_id}/": {
         "put": {
           "summary": "Edit Ticket",
           "operationId": "editTicket",
@@ -95,7 +95,7 @@
           }
         }
       },
-      "/ticket/api/v1/create/": {
+      "/tickets/api/v1/create/": {
         "post": {
           "summary": "Create Ticket",
           "operationId": "createTicket",
@@ -123,7 +123,7 @@
           }
         }
       },
-      "/ticket/api/v1/add_comment/{ticket_id}/": {
+      "/tickets/api/v1/add_comment/{ticket_id}/": {
         "post": {
           "summary": "Add Comment to Ticket",
           "operationId": "addComment",

@@ -51,10 +51,10 @@ class TicketsWidget extends Widget {
 }
 
 // Create an instance of TicketsWidget
-const messagingWidget = new TicketsWidget(wm, "Tickets");
+const ticketsAlertWidget = new TicketsWidget(wm, "Tickets");
 // Set the load interval to 5 seconds
-messagingWidget.settings["load_interval"] = 5000;
+ticketsAlertWidget.settings["load_interval"] = 5000;
 // Add the widget to the widget manager
-wm.addWidget(messagingWidget);
+wm.addWidget(ticketsAlertWidget);
 
-console.log("messagingWidget was here");
+console.log("ticketsAlertWidget was here");
