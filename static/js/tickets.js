@@ -7,7 +7,7 @@ class TicketsWidget extends Widget {
     this.tickets = [];
     this.newTicketsCount = 0; // Counter for new tickets
     this.tag = null;
-    this.settings.uri = '/ticket/pull/?action=get_info&source=open_issues'; // URI to fetch the list of tickets (or tickets)
+    this.settings.uri = '/tickets/pull/?action=get_info&source=open_issues'; // URI to fetch the list of tickets (or tickets)
     this.requestCallback = this.requestCallback.bind(this);
   }
 
