@@ -22,7 +22,7 @@
         {% for ticket in tickets %}
             <tr>
                 <th>{{ ticket.id }}</th>
-                <td><a href="{% url 'ticket_detail' ticket.id %}">{{ ticket.title }}</a></td>
+                <td><a href="{% url 'tickets:ticket_detail' ticket.id %}">{{ ticket.title }}</a></td>
                 <td>{{ ticket.assignee }}</td>
                 <td>{{ ticket.category }}</td>
                 <!-- Apply colors based on priority -->

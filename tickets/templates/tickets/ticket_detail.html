@@ -6,12 +6,12 @@
         <div class="card-header d-flex justify-content-between">
             <h5>#{{ ticket.id }} - {{ ticket.title }}</h5>
             <div>
-                <a href="{% url 'index' %}" class="btn btn-sm btn-outline-primary me-2">Back to List</a>
-                <a href="{% url 'edit_ticket' ticket.id %}" class="btn btn-sm btn-outline-secondary me-2">Edit</a>
+                <a href="{% url 'tickets:index' %}" class="btn btn-sm btn-outline-primary me-2">Back to List</a>
+                <a href="{% url 'tickets:edit_ticket' ticket.id %}" class="btn btn-sm btn-outline-secondary me-2">Edit</a>
                 {% if ticket.hidden %}
-                <a href="{% url 'unhide_ticket' ticket.id %}" class="btn btn-sm btn-outline-warning">Unhide</a>
+                <a href="{% url 'tickets:unhide_ticket' ticket.id %}" class="btn btn-sm btn-outline-warning">Unhide</a>
                 {% else %}
-                <a href="{% url 'hide_ticket' ticket.id %}" class="btn btn-sm btn-outline-warning">Hide</a>
+                <a href="{% url 'tickets:hide_ticket' ticket.id %}" class="btn btn-sm btn-outline-warning">Hide</a>
                 {% endif %}
             </div>
         </div>
@@ -36,7 +36,7 @@
     </div>
 
     <div class="mt-4">
-        <a href="{% url 'new_comment' ticket.id %}" class="btn btn-sm btn-primary">New Comment</a>
+        <a href="{% url 'tickets:new_comment' ticket.id %}" class="btn btn-sm btn-primary">New Comment</a>
     </div>
 
     <div class="card mt-4">

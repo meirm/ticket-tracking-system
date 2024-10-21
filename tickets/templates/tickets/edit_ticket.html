@@ -7,5 +7,5 @@
         {{ edit_form.as_p }}
         <button  class="btn btn-primary" type="submit">Submit</button>
     </form>
-    <a href="{% url 'ticket_detail' ticket.id %}">Back to detail</a>
+    <a href="{% url 'tickets:ticket_detail' ticket.id %}">Back to detail</a>
 {% endblock %}

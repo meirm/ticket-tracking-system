@@ -61,11 +61,11 @@ def api_ticket_edit(request, ticket_id):
         return JsonResponse({'error': 'Ticket not found'}, status=404)
     new_data = request.POST
     actions = []
-    if 'priority' in new_data and new_data['priority'] not in Ticket.Priority.choices:
+    if 'priority' in new_data and new_data['priority'] not in Ticket.Priority:
         return JsonResponse({'error': 'Invalid priority value'}, status=400)
-    if 'status' in new_data and new_data['status'] not in Ticket.Status.choices:
+    if 'status' in new_data and new_data['status'] not in Ticket.Status:
         return JsonResponse({'error': 'Invalid status value'}, status=400)
-    if 'category' in new_data and new_data['category'] not in Ticket.Category.choices:
+    if 'category' in new_data and new_data['category'] not in Ticket.Category:
         return JsonResponse({'error': 'Invalid category value'}, status=400)
     if 'assignee' in new_data:
         try:
@@ -295,10 +295,10 @@ def search_tickets(request):
     # We want to search for tickets based on the title and description fields.
     # check the browser history for the query to see if the search was done when showing all tasks, mine, closed, or hidden
     if 'q' not in request.GET:
-        return redirect('index')
+        return redirect('tickets:index')
     query = request.GET['q']
     if not query:
-        return redirect('index')
+        return redirect('tickets:index')
     # get history from browser
     history = request.META.get('HTTP_REFERER').split('/')[-2]
     
@@ -368,7 +368,7 @@ def in_progress_view(request):
 def new_ticket(request):
     if not request.user.has_perm('tickets.add_ticket'):
         messages.error(request, 'You do not have permission to create a ticket')
-        return redirect('index')
+        return redirect('tickets:index')
     if request.method == 'POST':
         user = User.objects.get(pk=request.user.id)
         title = request.POST['title']
@@ -410,11 +410,11 @@ def edit_ticket(request, ticket_id):
             except User.DoesNotExist:
                 return JsonResponse({'error': 'Invalid assignee'}, status=400)
         if request.POST['priority'] != ticket.priority:
-            if request.POST['priority'] not in Ticket.Priority.choices:
+            if request.POST['priority'] not in Ticket.Priority:
                 return JsonResponse({'error': 'Invalid priority value'}, status=400)
             changes.append(f"Priority: {ticket.priority} -> {request.POST['priority']}")
         if request.POST['category'] != ticket.category:
-            if request.POST['category'] not in Ticket.Category.choices:
+            if request.POST['category'] not in Ticket.Category:
                 return JsonResponse({'error': 'Invalid category value'}, status=400)
             changes.append(f"Category: {ticket.category} -> {request.POST['category']}")
         if request.POST['title'] != ticket.title:
@@ -422,7 +422,7 @@ def edit_ticket(request, ticket_id):
         if request.POST['description'] != ticket.description:
             changes.append(f"Description: {ticket.description} -> {request.POST['description']}")
         if request.POST['status'] != ticket.status:
-            if request.POST['status'] not in Ticket.Status.choices:
+            if request.POST['status'] not in Ticket.Status:
                 return JsonResponse({'error': 'Invalid status value'}, status=400)
             changes.append(f"Status: {ticket.status} -> {request.POST['status']}")
         # we have an issue with the date format, it is  reporting Due date: 2024-10-08 00:00:00+00:00 -> 2024-10-08 when actually the date is 2024-10-08 00:00:00
@@ -446,7 +446,7 @@ def edit_ticket(request, ticket_id):
         if request.POST['due_date'] != "":
             ticket.due_date = request.POST['due_date']
         ticket.save()
-        return redirect('ticket_detail', ticket_id=ticket_id)
+        return redirect('tickets:ticket_detail', ticket_id=ticket_id)
     else:
         return render(request, 'tickets/edit_ticket.html', {'ticket': ticket, 'edit_form': TicketForm(instance=ticket)})
     
@@ -457,7 +457,7 @@ def hide_ticket(request, ticket_id):
     ticket.save()
     messages.success(request, f'Ticket {ticket_id} hidden successfully')
     log_activity(ticket, request.user, "Hided ticket")
-    return redirect('index')
+    return redirect('tickets:index')
 
 @login_required
 def unhide_ticket(request, ticket_id):
@@ -466,7 +466,7 @@ def unhide_ticket(request, ticket_id):
     ticket.save()
     messages.success(request, f'Ticket #{ticket_id} unhidden successfully')
     log_activity(ticket, request.user, "Unhided ticket")
-    return redirect('index')
+    return redirect('tickets:index')
 
 @login_required
 def new_comment(request, ticket_id):
@@ -479,7 +479,7 @@ def new_comment(request, ticket_id):
         )
         messages.success(request, f'Comment added successfully to the ticket #{ticket_id}' )
         log_activity(ticket, request.user, "Added comment to ticket")
-        return redirect('ticket_detail', ticket_id=ticket_id)
+        return redirect('tickets:ticket_detail', ticket_id=ticket_id)
     else:
         return render(request, 'tickets/new_comment.html', {'comment_form':CommentForm(),'ticket': ticket})
     

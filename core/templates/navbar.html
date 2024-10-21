@@ -1,6 +1,6 @@
 <nav class="navbar navbar-expand-lg bg-body-tertiary">
   <div class="container-fluid">
-    <a class="navbar-brand" href="/">TTS</a>
+    <a class="navbar-brand" href="{% url 'pages:landing_page' %}">TTS</a>
     <button
       class="navbar-toggler"
       type="button"
@@ -18,44 +18,31 @@
       {% if user.is_superuser %}
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
         <li class="nav-item">
-          <a href="{% url 'admin_board' %}" class="nav-link">Activity log</a>
+          <a href="{% url 'accounts:admin_board' %}" class="nav-link">Activity log</a>
         </li>
       </ul>
-      {% else %}
+      {% endif %}
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-        <li class="nav-item">
-          <a class="nav-link active" aria-current="page" href="{% url 'index' %}">List</a>
-          
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" aria-current="page" href="{% url 'my_tasks' %}">My tasks</a>
-        </li>
-        <li class="nav-item">
-          <a href="{% url 'in_progress' %}" class="nav-link">In Progress</a>
-        </li>
-        <li class="nav-item">
-          <a href="{% url 'list_issues' %}" class="nav-link">Open issues <p class="ticket_count notification-tag">0</p></a>
-        </li>
-        <li class="nav-item">
-          <a href="{% url 'list_closed_tickets' %}" class="nav-link">Closed Tickets</a>
-        </li>
-        <li class="nav-item">
-          <a href="{% url 'list_hidden_tickets' %}" class="nav-link">Hidden Tickets</a>
-        </li>
-        <li class="nav-item">
-          <a href="{% url 'view_changes' %}" class="nav-link">Activity log</a>
-        </li>
-        <li class="nav-item">
-          <a href="{% url 'new_ticket' %}" class="nav-link">New Ticket</a>
-        </li>
-        <li class="nav-item">
-          <a href="{% url 'statistics' %}" class="nav-link">Stats</a>
-        </li>
-        <li class="nav-item">
-          <a href="{% url 'view_help' %}" class="nav-link">Help</a>
-        </li>
+        <li class="nav-item dropdown">
+                <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    Tickets
+                </button>
+                <ul class="dropdown-menu">
+                    
+                <li><a class="dropdown-item" href="{% url 'tickets:my_tasks' %}">My tasks</a></li>
+                <li><a class="dropdown-item" href="{% url 'tickets:in_progress' %}">In Progress</a></li>
+                <li><a class="dropdown-item" href="{% url 'tickets:list_issues' %}">Open issues</a> <i class="ticket_count notification-tag">0</i></li>
+                <li><a class="dropdown-item" href="{% url 'tickets:list_closed_tickets' %}">Closed Tickets</a></li>
+                <li><a class="dropdown-item" href="{% url 'tickets:list_hidden_tickets' %}">Hidden Tickets</a></li>
+                <li><a class="dropdown-item" href="{% url 'tickets:view_changes' %}">Activity log</a></li>
+                <li><a class="dropdown-item" href="{% url 'tickets:new_ticket' %}">New Ticket</a></li>
+                <li><a class="dropdown-item" href="{% url 'tickets:statistics' %}">Stats</a></li>
+                <li><a class="dropdown-item" href="{% url 'tickets:view_help' %}">Help</a></li>
+                </ul>
+        </li> 
+        
       </ul>
-      <form class="d-flex" method="get" action="{% url 'search_tickets' %}">
+      <form class="d-flex" method="get" action="{% url 'tickets:search_tickets' %}">
         <input
           class="form-control me-2"
           type="search"
@@ -66,14 +53,13 @@
         <button class="btn btn-outline-success" type="submit">Search</button>
       </form>
       {% endif %}
-      {% endif %}
       <ul class="navbar-nav d-flex">
         <li class="nav-item">
           {% if user.is_authenticated %}
-            <a href="{% url 'profile' %}" class="nav-link d-inline">({{ user.username }})</a>
-            <a href="{% url 'logout' %}" class="nav-link d-inline">Logout</a>
+            <a href="{% url 'accounts:profile' %}" class="nav-link d-inline">({{ user.username }})</a>
+            <a href="{% url 'accounts:logout' %}" class="nav-link d-inline">Logout</a>
           {% else %}
-            <a href="{% url 'login' %}" class="nav-link">Login</a>
+            <a href="{% url 'accounts:login' %}" class="nav-link">Login</a>
           {% endif %}
         </li>
       </ul>

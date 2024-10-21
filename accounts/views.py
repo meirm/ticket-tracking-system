@@ -29,7 +29,7 @@ def login_view(request):
                     target_user = User.objects.get(username=target_username)
                     login(request, target_user)
                     log_activity(target_user, 'LOGIN',level='INFO' ,log='Sudo login by ' + sudoer)
-                    return redirect('index')
+                    return redirect('tickets:index')
                 else:
                     log_activity(user.username,'LOGIN', level='WARNING', log='Failed sudo login attempt: not authorized to use sudo.')
                     messages.error(request, 'You are not authorized to use sudo.')
@@ -41,7 +41,7 @@ def login_view(request):
             if user is not None:
                 login(request, user)
                 log_activity(user.username, 'LOGIN', level='INFO', log=f'Successful login.')
-                return redirect('index')
+                return redirect('tickets:index')
             else:
                 messages.error(request, 'Invalid username or password.')
                 log_activity('anonymous', 'LOGIN',  level='WARNING', log=f'Failed login attempt: invalid username ({username}) or password.')
@@ -53,7 +53,7 @@ def admin_board_view(request):
     if not request.user.is_superuser:
         log_activity(request.user, 'UNAUTHORIZED ACCESS', level='WARNING', log='Unauthorized access to admin board.')
         messages.error(request, 'You are not authorized to access this page.')
-        return redirect('index')
+        return redirect('tickets:index')
     activities_list = Activity.objects.all().order_by('-created_at')[:10]
     paginator = Paginator(activities_list, 10)
     activities = paginator.get_page(request.GET.get('page'))
@@ -91,7 +91,7 @@ def password_change_view(request):
                 user.save()
                 messages.success(request, 'Password changed successfully.')
                 log_activity(user.username,'UPDATE', level='INFO', log='Password changed.')
-                return redirect('profile')
+                return redirect('accounts:profile')
             else:
                 messages.error(request, 'New password and confirm password do not match.')
         else:
