@@ -66,7 +66,7 @@ def admin_board_view(request):
 def logout_view(request):
     log_activity(request.user, 'LOGOUT', level='INFO', log='Logout.')
     logout(request)
-    return redirect('login')
+    return redirect('accounts:login')
 
 @login_required
 def profile_view(request):
