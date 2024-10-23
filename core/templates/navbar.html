@@ -28,7 +28,7 @@
                     Tickets
                 </button>
                 <ul class="dropdown-menu">
-                    
+		<li><a class="dropdown-item" href="{% url 'tickets:index' %}">All tickets</a></li>
                 <li><a class="dropdown-item" href="{% url 'tickets:my_tasks' %}">My tasks</a></li>
                 <li><a class="dropdown-item" href="{% url 'tickets:in_progress' %}">In Progress</a></li>
                 <li><a class="dropdown-item" href="{% url 'tickets:list_issues' %}">Open issues</a> <i class="ticket_count notification-tag">0</i></li>
