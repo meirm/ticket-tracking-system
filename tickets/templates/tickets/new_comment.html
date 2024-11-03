@@ -3,7 +3,7 @@
 {% block content %}
 {% include "tickets/header.html" %}
 <div class="container mt-4">
-    <h2 class="mb-4">New Comment for Ticket <a href="{% url 'ticket_detail' ticket.id %}">#{{ ticket.id }}</a></h2>
+    <h2 class="mb-4">New Comment for Ticket <a href="{% url 'tickets:ticket_detail' ticket.id %}">#{{ ticket.id }}</a></h2>
 
     <form method="post">
         {% csrf_token %}
