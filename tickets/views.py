@@ -3,7 +3,6 @@ from django.shortcuts import render, redirect
 from .models import Changes, Ticket
 from .forms import TicketForm, CommentForm
 # Restrict access to the index view to authenticated users only.
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.core.paginator import Paginator
@@ -11,12 +10,42 @@ from .statistics import Statistics
 from functools import wraps
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required, permission_required
+
 
 # You could store API keys in settings or a more secure storage like a database
 VALID_API_KEYS = {
     'your-api-key-1': 'Your username',
     'your-api-key-2': 'Another username',
 }
+
+def filter_tickets(request, ticket_list):
+    if request.user.groups.filter(name='Untrusted').exists():
+        ticket_list = ticket_list.filter(assignee=request.user) | ticket_list.filter(issuer=request.user)
+    elif request.user.groups.filter(name='ReadOnly').exists():
+        pass
+    elif request.user.groups.filter(name='Admin').exists():
+        pass
+    else:
+        ticket_list = ticket_list.filter(assignee=request.user)
+    return ticket_list
+
+def filter_ticket(request, ticket):
+    if request.user.groups.filter(name='Untrusted').exists():
+        if ticket.assignee == request.user or ticket.assignee == request.user:
+            pass
+        else:
+            return None
+    elif request.user.groups.filter(name='ReadOnly').exists():
+        pass
+    elif request.user.groups.filter(name='Admin').exists():
+        pass
+    else:
+        if ticket.assignee == request.user:
+            pass
+        else:
+            return None
+    return ticket
 
 def api_auth_required(view_func):
     @wraps(view_func)
@@ -205,8 +234,9 @@ def pull_request(request):
             # get the timestamp of the last ticket created
             open_bugs = Ticket.objects.all().filter(hidden=False).exclude(status=Ticket.Status.CLOSED).exclude(status=Ticket.Status.CANCELLED).order_by('-created_at').filter(category=Ticket.Category.BUG)
             # return json response
+            open_bugs = filter_tickets(request, open_bugs)
             return JsonResponse({
-                                 'tickets': [{"id":last_ticket.pk, "title": last_ticket.title, "status": "new" if last_ticket.status == Ticket.Status.OPEN else "known" } for last_ticket in open_bugs]
+                                 'tickets': [{"id":ticket.pk, "title": ticket.title, "status": "new" if ticket.status == Ticket.Status.OPEN else "known" } for ticket in open_bugs]
                                  })   
 
 @login_required
@@ -219,6 +249,8 @@ def list_issues(request):
     .filter(category=Ticket.Category.BUG) \
     .exclude(status=Ticket.Status.CLOSED).exclude(status=Ticket.Status.CANCELLED) \
     .order_by('-updated_at')
+    ticket_list = filter_tickets(request, ticket_list)
+            
     paginator = Paginator(ticket_list, 10)
     tickets_count = ticket_list.count()
     tickets = paginator.get_page(request.GET.get('page'))
@@ -235,6 +267,7 @@ def list_closed_tickets(request):
     ticket_list = Ticket.objects.all().filter(hidden=False) \
     .filter(status__in=[Ticket.Status.CLOSED, Ticket.Status.CANCELLED]) \
     .order_by('-updated_at')
+    ticket_list = filter_tickets(request, ticket_list)
     paginator = Paginator(ticket_list, 10)  # Show 10 tickets per page.
     tickets_count = ticket_list.count()
     page_number = request.GET.get('page')
@@ -249,6 +282,7 @@ def list_closed_tickets(request):
 @login_required
 def list_hidden_tickets(request):
     ticket_list = Ticket.objects.all().filter(hidden=True).order_by('-updated_at')
+    ticket_list = filter_tickets(request, ticket_list)
     paginator = Paginator(ticket_list, 10)  # Show 10 tickets per page.
     tickets_count = ticket_list.count()
     page_number = request.GET.get('page')
@@ -263,7 +297,8 @@ def list_hidden_tickets(request):
 
 @login_required
 def view_changes(request):
-    ticket_list = Changes.objects.all().order_by('-created_at')
+    ticket_list = Changes.objects.all().order_by('-created_at') 
+    # FIXME: filter by permissions
     paginator = Paginator(ticket_list, 10)
     tickets_count = ticket_list.count()
     page_number = request.GET.get('page')
@@ -273,6 +308,7 @@ def view_changes(request):
 @login_required
 def index(request):
     ticket_list = Ticket.objects.filter(hidden=False).exclude(status=Ticket.Status.CLOSED).exclude(status=Ticket.Status.CANCELLED).order_by('-updated_at')
+    ticket_list = filter_tickets(request, ticket_list)
     paginator = Paginator(ticket_list, 10)  # Show 10 tickets per page.
     tickets_count = ticket_list.count()
     page_number = request.GET.get('page')
@@ -288,6 +324,10 @@ def index(request):
 @login_required
 def ticket_detail(request, ticket_id):
     ticket = Ticket.objects.get(pk=ticket_id)
+    ticket = filter_ticket(request, ticket)
+    if not ticket:
+        messages.error(request, 'You do not have permission to view this ticket')
+        return redirect('tickets:index')
     return render(request, 'tickets/ticket_detail.html', {'ticket': ticket, 'comments': ticket.comments.all().order_by('-created_at')})
 
 @login_required
@@ -313,6 +353,7 @@ def search_tickets(request):
     # check if the search was done when showing hidden tasks
     elif 'hidden' in history:
         tickets = all_tickets.filter(hidden=True)
+        
     else:
         tickets = all_tickets.filter(hidden=False)
     if 'closed' in history:
@@ -323,7 +364,9 @@ def search_tickets(request):
         messages.error(request, f'No tickets found for "{query}"')
     else:
         messages.success(request, f'Search results for "{query}" coming from {history}')
+    tickets = filter_tickets(request, tickets)
     ticket_list = tickets.order_by('-updated_at')
+    
     paginator = Paginator(tickets, 10)
     tickets_count = ticket_list.count()
     page_number = request.GET.get('page')
@@ -335,9 +378,11 @@ def search_tickets(request):
     }
     return render(request, 'tickets/index.html',context)
     
+
 @login_required
 def my_tasks(request):
     ticket_list = Ticket.objects.filter(hidden=False, assignee=request.user).exclude(status=Ticket.Status.CLOSED).exclude(status=Ticket.Status.CANCELLED).order_by('-updated_at')
+    ticket_list = filter_tickets(request, ticket_list)
     paginator = Paginator(ticket_list, 10)
     tickets_count = ticket_list.count()
     page_number = request.GET.get('page')
@@ -353,6 +398,7 @@ def my_tasks(request):
 @login_required
 def in_progress_view(request):
     ticket_list = Ticket.objects.filter(hidden=False, status=Ticket.Status.IN_PROGRESS).order_by('-updated_at')
+    ticket_list = filter_tickets(request, ticket_list)
     paginator = Paginator(ticket_list, 10)
     tickets_count = ticket_list.count()
     page_number = request.GET.get('page')
@@ -401,6 +447,10 @@ def new_ticket(request):
 @login_required
 def edit_ticket(request, ticket_id):
     ticket = Ticket.objects.get(pk=ticket_id)
+    ticket = filter_ticket(request, ticket)
+    if not ticket:
+        messages.error(request, 'You do not have permission to edit this ticket')
+        return redirect('tickets:index')
     if request.method == 'POST':
         # We want to create a new comment entry with the details of the changes made to the ticket.
         changes = []
@@ -453,6 +503,10 @@ def edit_ticket(request, ticket_id):
 @login_required
 def hide_ticket(request, ticket_id):
     ticket = Ticket.objects.get(pk=ticket_id)
+    ticket = filter_ticket(request, ticket)
+    if not ticket:
+        messages.error(request, 'You do not have permission to hide this ticket')
+        return redirect('tickets:index')
     ticket.hidden = True
     ticket.save()
     messages.success(request, f'Ticket {ticket_id} hidden successfully')
@@ -462,6 +516,10 @@ def hide_ticket(request, ticket_id):
 @login_required
 def unhide_ticket(request, ticket_id):
     ticket = Ticket.objects.get(pk=ticket_id)
+    ticket = filter_ticket(request, ticket)
+    if not ticket:
+        messages.error(request, 'You do not have permission to unhide this ticket')
+        return redirect('tickets:index')
     ticket.hidden = False
     ticket.save()
     messages.success(request, f'Ticket #{ticket_id} unhidden successfully')
@@ -471,6 +529,10 @@ def unhide_ticket(request, ticket_id):
 @login_required
 def new_comment(request, ticket_id):
     ticket = Ticket.objects.get(pk=ticket_id)
+    ticket = filter_ticket(request, ticket)
+    if not ticket:
+        messages.error(request, 'You do not have permission to add a comment to this ticket')
+        return redirect('tickets:index')
     if request.method == 'POST':
         comment = request.POST['comment']
         ticket.comments.create(
@@ -486,6 +548,10 @@ def new_comment(request, ticket_id):
 @login_required
 def edit_comment(request, ticket_id, comment_id):
     ticket = Ticket.objects.get(pk=ticket_id)
+    ticket = filter_ticket(request, ticket)
+    if not ticket:
+        messages.error(request, 'You do not have permission to edit a comment in this ticket')
+        return redirect('tickets:index')
     comment = ticket.comments.get(pk=comment_id)
     if request.method == 'POST':
         comment.comment = request.POST['comment']
@@ -499,6 +565,10 @@ def edit_comment(request, ticket_id, comment_id):
 @login_required
 def delete_comment(request, ticket_id, comment_id):
     ticket = Ticket.objects.get(pk=ticket_id)
+    ticket = filter_ticket(request, ticket)
+    if not ticket:
+        messages.error(request, 'You do not have permission to delete a comment in this ticket')
+        return redirect('tickets:index')
     comment = ticket.comment_set.get(pk=comment_id)
     comment.delete()
     return render(request, 'tickets/ticket_detail.html', {'ticket': ticket})
