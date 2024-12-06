@@ -1,3 +1,12 @@
+class Levels {
+    constructor() {
+      this.CRITICAL = 0;
+      this.MAJOR = 1;
+      this.MINOR = 2;
+      this.INFO = 3;
+      this.DEBUG = 4;
+    }
+  }
 export class JPost {
     constructor() {
       this.settings = {};
@@ -5,19 +14,14 @@ export class JPost {
       this.settings["method"] = "POST";
       this.settings["timeout"] = 3000;
       this.log_level = ["CRITICAL", "MAJOR", "MINOR", "INFO", "DEBUG"];
-      this.debug_level = 3; // 0 critical, 1 major, 2 minor, 3 info, 4 debug
-      this.CRITICAL = 0;
-      this.MAJOR = 1;
-      this.MINOR = 2;
-      this.INFO = 3;
-      this.DEBUG = 4;
+      this.debug_level = Levels.INFO;
       this.settings["contentType"] = "application/json; charset=utf-8";
       this.settings["dataType"] = "json";
     }
   
     Log(level, msg) {
-      if (level > this.DEBUG) {
-        level = this.DEBUG;
+      if (level > Levels.DEBUG) {
+        level = Levels.DEBUG;
       }
       if (this.debug_level >= level) {
         console.log(this.log_level[level] + " - " + "JPost(" + this.name + "): " + msg);
@@ -26,9 +30,9 @@ export class JPost {
   
     async Callback(response) {
       const data = await response.json();
-      this.Log(this.DEBUG, "got it");
-      this.Log(this.DEBUG, "calling client...");
-      this.Log(this.DEBUG, this.settings["client"].name);
+      this.Log(Levels.DEBUG, "got it");
+      this.Log(Levels.DEBUG, "calling client...");
+      this.Log(Levels.DEBUG, this.settings["client"].name);
       this.settings["client"].Request_callback(data);
     }
   
@@ -45,7 +49,7 @@ export class JPost {
       const contentType = this.settings["contentType"];
       const uri = this.settings["uri"];
       const timeoutValue = this.settings["timeout"];
-      this.Log(this.DEBUG, "calling " + uri + " with data:" + txt);
+      this.Log(Levels.DEBUG, "calling " + uri + " with data:" + txt);
     
       try {
         const response = await this.timeout(timeoutValue, fetch(uri, {
