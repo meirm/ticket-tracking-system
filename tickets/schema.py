@@ -4,6 +4,7 @@ from graphene_django import DjangoObjectType
 
 from .models import Ticket, Comment
 from django.contrib.auth.models import User
+from django.db.models import Q
 
 class UserType(DjangoObjectType):
     class Meta:
@@ -22,7 +23,7 @@ class TicketType(DjangoObjectType):
         fields = ("__all__")
 
 class Query(graphene.ObjectType):
-    all_tickets = graphene.List(TicketType)
+    all_tickets = graphene.List(TicketType, search=graphene.String())
     all_comments = graphene.List(CommentType)
     all_users = graphene.List(UserType)
     # get individual ticket by id
@@ -73,11 +74,17 @@ class Query(graphene.ObjectType):
         else:
             return Comment.objects.select_related('ticket').all()
 
-    def resolve_all_tickets(root, info):
+    def resolve_all_tickets(root, info, search=None, **kwargs):
         # We can easily optimize query count in the resolve method
         if info.context.user.is_anonymous:
             return Ticket.objects.none()
         else:
+            if search:
+                filter = (
+                    Q(title__icontains=search) |
+                    Q(description__icontains=search)
+                )
+                return Ticket.objects.filter(filter)
             return Ticket.objects.all()
 
 schema = graphene.Schema(query=Query)
