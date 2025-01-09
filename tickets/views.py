@@ -127,7 +127,9 @@ def api_ticket_edit(request, ticket_id):
         )
         log_activity(ticket, request.user, "Changes to ticket")
     ticket.save()
-    return JsonResponse({'ticket_id': ticket.id})
+    if len(actions) == 0:
+        return JsonResponse({'error': 'No changes made'}, status=400)
+    return JsonResponse({'ticket_id': ticket.id, 'actions': actions, "success": True})
 
 @csrf_exempt
 @api_auth_required
@@ -147,12 +149,34 @@ def api_ticket_create(request):
     
 @api_auth_required
 def api_list_tickets(request):
+    # Filter tickets based on request parameters
+    filter = {}
+    if 'status' in request.GET:
+        filter['status__in']= request.GET['status'].split(",")
+    if 'priority' in request.GET:
+        filter['priority__in'] = request.GET['priority'].split(",")
+    if 'from_date' in request.GET:
+        filter['created_at__gte'] = request.GET['from_date']
+    if 'to_date' in request.GET:
+        filter['created_at__lte'] = request.GET['to_date']
+    if 'due_date' in request.GET:
+        filter['due_date__in'] = request.GET['due_date'].split(",")
+    if 'assignee' in request.GET:
+        filter['assignee__username__in'] =  request.GET['assignee'].split(",")
+    if 'issuer' in request.GET:
+        filter['issuer__username__in'] = request.GET['issuer'].split(",")
+
     tickets = Ticket.objects.filter(hidden=False) \
         .exclude(status=Ticket.Status.CLOSED).exclude(status=Ticket.Status.CANCELLED) \
         .order_by('-updated_at')
+    
+    if filter:
+        tickets = tickets.filter(**filter)
+
     tickets_data = [
         {
             'id': ticket.id,
+            'issuer': ticket.issuer.username,
             'title': ticket.title,
             'status': ticket.status,
             'priority': ticket.priority,
@@ -164,7 +188,7 @@ def api_list_tickets(request):
         for ticket in tickets
     ]
     # return JsonResponse({}, safe=False)  
-    return JsonResponse({'tickets': tickets_data}, safe=False)
+    return JsonResponse({'tickets': tickets_data}, json_dumps_params={"indent":2}, safe=False)
 
 # API for ticket details
 @api_auth_required
