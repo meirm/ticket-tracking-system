@@ -4,3 +4,4 @@ python-dateutil
 psycopg2-binary==2.9.10
 python-dotenv
 gunicorn
+graphene-django==3.2.2
