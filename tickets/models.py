@@ -19,12 +19,16 @@ class Category(models.Model):
         return self.name
     
 class Priority(models.Model):
+    class Meta:
+        verbose_name_plural = "priorities"
     name = models.CharField(max_length=255)
     
     def __str__(self):
         return self.name
     
 class Status(models.Model):
+    class Meta:
+        verbose_name_plural = "statuses"
     name = models.CharField(max_length=255)
     
     def __str__(self):
