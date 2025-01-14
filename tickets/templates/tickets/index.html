@@ -39,11 +39,11 @@
                 <td>{{ ticket.category }}</td>
                 <!-- Apply colors based on priority -->
                 <td>
-                    {% if ticket.priority == 'HIGH' %}
+                    {% if ticket.priority.name == 'High' %}
                         <span class="badge bg-danger">{{ ticket.priority }}</span>
-                    {% elif ticket.priority == 'MEDIUM' %}
+                    {% elif ticket.priority.name == 'Medium' %}
                         <span class="badge bg-warning text-dark">{{ ticket.priority }}</span>
-                    {% elif ticket.priority == 'LOW' %}
+                    {% elif ticket.priority.name == 'Low' %}
                         <span class="badge bg-success">{{ ticket.priority }}</span>
                     {% else %}
                         <span class="badge bg-secondary">{{ ticket.priority }}</span>

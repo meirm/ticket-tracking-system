@@ -1,6 +1,6 @@
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
-from .models import Changes, Ticket
+from .models import Changes, Ticket, Category, Status, Priority
 from .forms import TicketForm, CommentForm
 # Restrict access to the index view to authenticated users only.
 from django.contrib.auth.models import User
@@ -90,11 +90,11 @@ def api_ticket_edit(request, ticket_id):
         return JsonResponse({'error': 'Ticket not found'}, status=404)
     new_data = request.POST
     actions = []
-    if 'priority' in new_data and new_data['priority'] not in Ticket.Priority:
+    if 'priority' in new_data and not Priority.objects.filter(name=request.POST['priority']).exists():
         return JsonResponse({'error': 'Invalid priority value'}, status=400)
-    if 'status' in new_data and new_data['status'] not in Ticket.Status:
+    if 'status' in new_data and not Status.objects.filter(name=request.POST['status']).exists():
         return JsonResponse({'error': 'Invalid status value'}, status=400)
-    if 'category' in new_data and new_data['category'] not in Ticket.Category:
+    if 'category' in new_data and not Category.objects.filter(name=request.POST['category']).exists():
         return JsonResponse({'error': 'Invalid category value'}, status=400)
     if 'assignee' in new_data:
         try:
@@ -110,13 +110,13 @@ def api_ticket_edit(request, ticket_id):
         ticket.description = request.POST['description']
     if 'status' in new_data:
         actions.append(f"Status: {ticket.status} -> {request.POST['status']}")
-        ticket.status = request.POST['status']
+        ticket.status = Status.objects.filter(name=request.POST['status']).first()
     if 'priority' in new_data:
         actions.append(f"Priority: {ticket.priority} -> {request.POST['priority']}")
-        ticket.priority = request.POST['priority']
+        ticket.priority = Priority.objects.filter(name=request.POST['priority']).first()
     if 'category' in new_data:
         actions.append(f"Category: {ticket.category} -> {request.POST['category']}")
-        ticket.category = request.POST['category']
+        ticket.category = Category.objects.filter(name=request.POST['category']).first()
     if 'due_date' in new_data:
         actions.append(f"Due date: {ticket.due_date} -> {request.POST['due_date']}")
         ticket.due_date = request.POST['due_date']
@@ -134,14 +134,20 @@ def api_ticket_edit(request, ticket_id):
 @csrf_exempt
 @api_auth_required
 def api_ticket_create(request):
+    if not Priority.objects.filter(name=request.POST['priority']).exists():
+        return JsonResponse({'error': 'Invalid priority value'}, status=400)
+    if not Status.objects.filter(name=request.POST['status']).exists():
+        return JsonResponse({'error': 'Invalid status value'}, status=400)
+    if not Category.objects.filter(name=request.POST['category']).exists():
+        return JsonResponse({'error': 'Invalid category value'}, status=400)
     ticket = Ticket.objects.create(
         issuer=request.user,
         assignee=User.objects.get(pk=request.POST['assignee']),
         title=request.POST['title'],
         description=request.POST['description'],
-        status=request.POST['status'],
-        priority=request.POST['priority'],
-        category=request.POST['category'],
+        status=Priority.objects.filter(name=request.POST['status']).first(),
+        priority=Priority.objects.filter(name=request.POST['priority']).first(),
+        category=Category.objects.filter(name=request.POST['category']).first(),
         due_date=request.POST['due_date']
     )
     return JsonResponse({'ticket_id': ticket.id})
@@ -167,7 +173,7 @@ def api_list_tickets(request):
         filter['issuer__username__in'] = request.GET['issuer'].split(",")
 
     tickets = Ticket.objects.filter(hidden=False) \
-        .exclude(status=Ticket.Status.CLOSED).exclude(status=Ticket.Status.CANCELLED) \
+        .exclude(status__name__in=["Closed", "Cancelled"]) \
         .order_by('-updated_at')
     
     if filter:
@@ -178,8 +184,9 @@ def api_list_tickets(request):
             'id': ticket.id,
             'issuer': ticket.issuer.username,
             'title': ticket.title,
-            'status': ticket.status,
-            'priority': ticket.priority,
+            'status': ticket.status.name,
+            'priority': ticket.priority.name,
+            'category': ticket.category.name,
             'assignee': ticket.assignee.username,
             'created_at': ticket.created_at.isoformat(),
             'updated_at': ticket.updated_at.isoformat(),
@@ -201,8 +208,9 @@ def api_ticket_detail(request, ticket_id):
         'id': ticket.id,
         'title': ticket.title,
         'description': ticket.description,
-        'status': ticket.status,
-        'priority': ticket.priority,
+        'status': ticket.status.name,
+        'priority': ticket.priority.name,
+        'category': ticket.category.name,
         'assignee': ticket.assignee.username,
         'created_at': ticket.created_at.isoformat(),
         'updated_at': ticket.updated_at.isoformat(),
@@ -256,11 +264,11 @@ def pull_request(request):
     if action == 'get_info':
         if source == 'open_issues':
             # get the timestamp of the last ticket created
-            open_bugs = Ticket.objects.all().filter(hidden=False).exclude(status=Ticket.Status.CLOSED).exclude(status=Ticket.Status.CANCELLED).order_by('-created_at').filter(category=Ticket.Category.BUG)
+            open_bugs = Ticket.objects.all().filter(hidden=False).exclude(status__name__in=["Closed", "Cancelled"]).order_by('-created_at').filter(category__name="Bug")
             # return json response
             open_bugs = filter_tickets(request, open_bugs)
             return JsonResponse({
-                                 'tickets': [{"id":ticket.pk, "title": ticket.title, "status": "new" if ticket.status == Ticket.Status.OPEN else "known" } for ticket in open_bugs]
+                                 'tickets': [{"id":ticket.pk, "title": ticket.title, "status": "new" if ticket.status.name == "Open" else "known" } for ticket in open_bugs]
                                  })   
 
 @login_required
@@ -270,8 +278,8 @@ def help_view(request):
 @login_required
 def list_issues(request):
     ticket_list = Ticket.objects.all().filter(hidden=False) \
-    .filter(category=Ticket.Category.BUG) \
-    .exclude(status=Ticket.Status.CLOSED).exclude(status=Ticket.Status.CANCELLED) \
+    .filter(category__name="Bug") \
+    .exclude(status__name__in=["Closed", "Cancelled"]) \
     .order_by('-updated_at')
     ticket_list = filter_tickets(request, ticket_list)
             
@@ -289,7 +297,7 @@ def list_issues(request):
 @login_required
 def list_closed_tickets(request):
     ticket_list = Ticket.objects.all().filter(hidden=False) \
-    .filter(status__in=[Ticket.Status.CLOSED, Ticket.Status.CANCELLED]) \
+    .filter(status__name__in=["Closed", "Cancelled"]) \
     .order_by('-updated_at')
     ticket_list = filter_tickets(request, ticket_list)
     paginator = Paginator(ticket_list, 10)  # Show 10 tickets per page.
@@ -331,7 +339,7 @@ def view_changes(request):
 
 @login_required
 def index(request):
-    ticket_list = Ticket.objects.filter(hidden=False).exclude(status=Ticket.Status.CLOSED).exclude(status=Ticket.Status.CANCELLED).order_by('-updated_at')
+    ticket_list = Ticket.objects.filter(hidden=False).exclude(status__name__in=["Closed", "Cancelled"]).order_by('-updated_at')
     ticket_list = filter_tickets(request, ticket_list)
     paginator = Paginator(ticket_list, 10)  # Show 10 tickets per page.
     tickets_count = ticket_list.count()
@@ -381,9 +389,9 @@ def search_tickets(request):
     else:
         tickets = all_tickets.filter(hidden=False)
     if 'closed' in history:
-        tickets = tickets.filter(status=Ticket.Status.CLOSED) | tickets.filter(status=Ticket.Status.CANCELLED)
+        tickets = tickets.filter(status__name__in=["Closed", "Cancelled"])
     else:
-        tickets = tickets.exclude(status=Ticket.Status.CLOSED).exclude(status=Ticket.Status.CANCELLED)
+        tickets = tickets.exclude(status__name__in=["Closed", "Cancelled"])
     if tickets.count() == 0:
         messages.error(request, f'No tickets found for "{query}"')
     else:
@@ -405,7 +413,7 @@ def search_tickets(request):
 
 @login_required
 def my_tasks(request):
-    ticket_list = Ticket.objects.filter(hidden=False, assignee=request.user).exclude(status=Ticket.Status.CLOSED).exclude(status=Ticket.Status.CANCELLED).order_by('-updated_at')
+    ticket_list = Ticket.objects.filter(hidden=False, assignee=request.user).exclude(status__name__in=["Closed", "Cancelled"]).order_by('-updated_at')
     ticket_list = filter_tickets(request, ticket_list)
     paginator = Paginator(ticket_list, 10)
     tickets_count = ticket_list.count()
@@ -421,7 +429,7 @@ def my_tasks(request):
 
 @login_required
 def in_progress_view(request):
-    ticket_list = Ticket.objects.filter(hidden=False, status=Ticket.Status.IN_PROGRESS).order_by('-updated_at')
+    ticket_list = Ticket.objects.filter(hidden=False, status__name = "In Progress").order_by('-updated_at')
     ticket_list = filter_tickets(request, ticket_list)
     paginator = Paginator(ticket_list, 10)
     tickets_count = ticket_list.count()
@@ -458,9 +466,9 @@ def new_ticket(request):
             assignee=assignee,
             title=title,
             description=description,
-            status=status,
-            priority=priority,
-            category=category,
+            status=Status.objects.get(id=status),
+            priority=Priority.objects.get(id=priority),
+            category=Category.objects.get(id=category),
             due_date=due_date
         )
         log_activity(ticket, request.user, "Created ticket")
@@ -483,22 +491,28 @@ def edit_ticket(request, ticket_id):
                 changes.append(f"Assigned: {ticket.assignee} -> {User.objects.get(pk=request.POST['assignee'])}")
             except User.DoesNotExist:
                 return JsonResponse({'error': 'Invalid assignee'}, status=400)
-        if request.POST['priority'] != ticket.priority:
-            if request.POST['priority'] not in Ticket.Priority:
+        # Return error if the priority value is not a valid Priority names
+        
+        if request.POST['priority'] != ticket.priority.pk:
+            if not Priority.objects.filter(pk=request.POST['priority']).exists():
                 return JsonResponse({'error': 'Invalid priority value'}, status=400)
-            changes.append(f"Priority: {ticket.priority} -> {request.POST['priority']}")
-        if request.POST['category'] != ticket.category:
-            if request.POST['category'] not in Ticket.Category:
+            category_name = Priority.objects.get(pk=request.POST['priority']).name
+            changes.append(f"Priority: {ticket.priority.name} -> {category_name}")
+        if request.POST['category'] != ticket.category.pk:
+            if not Category.objects.filter(pk=request.POST['category']).exists():
                 return JsonResponse({'error': 'Invalid category value'}, status=400)
-            changes.append(f"Category: {ticket.category} -> {request.POST['category']}")
+            category_name = Category.objects.get(pk=request.POST['category']).name
+            changes.append(f"Category: {ticket.category.name} -> {category_name}")
+        if request.POST['status'] != ticket.status.pk:
+            if not Status.objects.filter(pk=request.POST['status']).exists():
+                return JsonResponse({'error': 'Invalid status value'}, status=400)
+            status_name = Status.objects.get(pk=request.POST['status']).name
+            changes.append(f"Status: {ticket.status.name} -> {status_name}")
         if request.POST['title'] != ticket.title:
             changes.append(f"Title: {ticket.title} -> {request.POST['title']}")
         if request.POST['description'] != ticket.description:
             changes.append(f"Description: {ticket.description} -> {request.POST['description']}")
-        if request.POST['status'] != ticket.status:
-            if request.POST['status'] not in Ticket.Status:
-                return JsonResponse({'error': 'Invalid status value'}, status=400)
-            changes.append(f"Status: {ticket.status} -> {request.POST['status']}")
+        
         # we have an issue with the date format, it is  reporting Due date: 2024-10-08 00:00:00+00:00 -> 2024-10-08 when actually the date is 2024-10-08 00:00:00
         # we need to fix this, we can use the date filter to format the date
         ticket_due_date = ticket.due_date.isoformat() if ticket.due_date else ""
@@ -513,10 +527,10 @@ def edit_ticket(request, ticket_id):
             log_activity(ticket, request.user, "Changes to ticket")
         ticket.title = request.POST['title']
         ticket.description = request.POST['description']
-        ticket.priority = request.POST['priority']
-        ticket.category = request.POST['category']
+        ticket.priority = Priority.objects.get(pk=request.POST['priority'])
+        ticket.category = Category.objects.get(pk=request.POST['category'])
         ticket.assignee = User.objects.get(pk=request.POST['assignee'])
-        ticket.status = request.POST['status']
+        ticket.status = Status.objects.get(pk=request.POST['status'])
         if request.POST['due_date'] != "":
             ticket.due_date = request.POST['due_date']
         ticket.save()
@@ -547,7 +561,7 @@ def unhide_ticket(request, ticket_id):
     ticket.hidden = False
     ticket.save()
     messages.success(request, f'Ticket #{ticket_id} unhidden successfully')
-    log_activity(ticket, request.user, "Unhided ticket")
+    log_activity(ticket, request.user, "Ticket unhiden")
     return redirect('tickets:index')
 
 @login_required
