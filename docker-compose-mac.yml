@@ -2,17 +2,17 @@
 services:
   web:
     build: .
-    command: python manage.py runserver 0.0.0.0:8000
+    command: python manage.py runserver 0.0.0.0:9000
     hostname: tts
     volumes:
       - .:/app
     ports:
-      - "8000:8000"
+      - "9000:9000"
     depends_on:
       - db
     env_file: .env
   db:
-    image: postgres:13
+    image: postgres:16
     container_name: db
     volumes:
       - postgres_data:/var/lib/postgresql/data
