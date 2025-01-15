@@ -30,6 +30,8 @@ class Status(models.Model):
     class Meta:
         verbose_name_plural = "statuses"
     name = models.CharField(max_length=255)
+    # add a boolean field to indicate if the status is closed/cancelled/resolved/backlogged
+    closed = models.BooleanField(default=False)
     
     def __str__(self):
         return self.name

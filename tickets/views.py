@@ -182,7 +182,7 @@ def api_list_tickets(request):
         filter['issuer__username__in'] = request.GET['issuer'].split(",")
 
     tickets = Ticket.objects.filter(hidden=False) \
-        .exclude(status__name__in=["Closed", "Cancelled"]) \
+        .exclude(status__closed=True) \
         .order_by('-updated_at')
     
     if filter:
@@ -273,7 +273,7 @@ def pull_request(request):
     if action == 'get_info':
         if source == 'open_issues':
             # get the timestamp of the last ticket created
-            open_bugs = Ticket.objects.all().filter(hidden=False).exclude(status__name__in=["Closed", "Cancelled"]).order_by('-created_at').filter(category__name="Bug")
+            open_bugs = Ticket.objects.all().filter(hidden=False).exclude(status__closed=True).order_by('-created_at').filter(category__name="Bug")
             # return json response
             open_bugs = filter_tickets(request, open_bugs)
             return JsonResponse({
@@ -288,7 +288,7 @@ def help_view(request):
 def list_issues(request):
     ticket_list = Ticket.objects.all().filter(hidden=False) \
     .filter(category__name="Bug") \
-    .exclude(status__name__in=["Closed", "Cancelled"]) \
+    .exclude(status__closed=True) \
     .order_by('-updated_at')
     ticket_list = filter_tickets(request, ticket_list)
             
@@ -306,7 +306,7 @@ def list_issues(request):
 @login_required
 def list_closed_tickets(request):
     ticket_list = Ticket.objects.all().filter(hidden=False) \
-    .filter(status__name__in=["Closed", "Cancelled"]) \
+    .filter(status__closed=True) \
     .order_by('-updated_at')
     ticket_list = filter_tickets(request, ticket_list)
     paginator = Paginator(ticket_list, 10)  # Show 10 tickets per page.
@@ -348,7 +348,7 @@ def view_changes(request):
 
 @login_required
 def index(request):
-    ticket_list = Ticket.objects.filter(hidden=False).exclude(status__name__in=["Closed", "Cancelled"]).order_by('-updated_at')
+    ticket_list = Ticket.objects.filter(hidden=False).exclude(status__closed=True).order_by('-updated_at')
     ticket_list = filter_tickets(request, ticket_list)
     paginator = Paginator(ticket_list, 10)  # Show 10 tickets per page.
     tickets_count = ticket_list.count()
@@ -398,9 +398,9 @@ def search_tickets(request):
     else:
         tickets = all_tickets.filter(hidden=False)
     if 'closed' in history:
-        tickets = tickets.filter(status__name__in=["Closed", "Cancelled"])
+        tickets = tickets.filter(status__closed=True)
     else:
-        tickets = tickets.exclude(status__name__in=["Closed", "Cancelled"])
+        tickets = tickets.exclude(status__closed=True)
     if tickets.count() == 0:
         messages.error(request, f'No tickets found for "{query}"')
     else:
@@ -422,7 +422,7 @@ def search_tickets(request):
 
 @login_required
 def my_tasks(request):
-    ticket_list = Ticket.objects.filter(hidden=False, assignee=request.user).exclude(status__name__in=["Closed", "Cancelled"]).order_by('-updated_at')
+    ticket_list = Ticket.objects.filter(hidden=False, assignee=request.user).exclude(status__closed=True).order_by('-updated_at')
     ticket_list = filter_tickets(request, ticket_list)
     paginator = Paginator(ticket_list, 10)
     tickets_count = ticket_list.count()
