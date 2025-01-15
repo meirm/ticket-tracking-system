@@ -11,7 +11,7 @@ from functools import wraps
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required, permission_required
-
+from tickets.authorization import can_view_group_tickets
 
 # You could store API keys in settings or a more secure storage like a database
 VALID_API_KEYS = {
@@ -27,7 +27,16 @@ def filter_tickets(request, ticket_list):
     elif request.user.groups.filter(name='Admin').exists():
         pass
     else:
-        ticket_list = ticket_list.filter(assignee=request.user)
+        groups = request.user.groups.all()
+        for group in groups:
+            if group.permissions.filter(codename='can_view_all_tickets').exists():
+                pass
+            elif can_view_group_tickets(request.user, group.id):
+                ticket_list = ticket_list.filter(assigned_group=group) | ticket_list.filter(assignee=request.user) | ticket_list.filter(issuer=request.user)
+            elif group.permissions.filter(codename='can_view_own_tickets').exists():
+                ticket_list = ticket_list.filter(assignee=request.user) | ticket_list.filter(issuer=request.user)
+            else:
+                ticket_list = ticket_list.filter(assignee=request.user) | ticket_list.filter(issuer=request.user)
     return ticket_list
 
 def filter_ticket(request, ticket):
