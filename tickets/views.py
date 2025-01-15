@@ -502,21 +502,24 @@ def edit_ticket(request, ticket_id):
                 return JsonResponse({'error': 'Invalid assignee'}, status=400)
         # Return error if the priority value is not a valid Priority names
         
-        if request.POST['priority'] != ticket.priority.pk:
+        if request.POST['priority']:
             if not Priority.objects.filter(pk=request.POST['priority']).exists():
                 return JsonResponse({'error': 'Invalid priority value'}, status=400)
-            category_name = Priority.objects.get(pk=request.POST['priority']).name
-            changes.append(f"Priority: {ticket.priority.name} -> {category_name}")
-        if request.POST['category'] != ticket.category.pk:
+            priority = Priority.objects.get(pk=request.POST['priority'])
+            if priority != ticket.priority:
+                changes.append(f"Priority: {ticket.priority.name} -> {priority.name}")
+        if request.POST['category']:
             if not Category.objects.filter(pk=request.POST['category']).exists():
                 return JsonResponse({'error': 'Invalid category value'}, status=400)
-            category_name = Category.objects.get(pk=request.POST['category']).name
-            changes.append(f"Category: {ticket.category.name} -> {category_name}")
-        if request.POST['status'] != ticket.status.pk:
+            category = Category.objects.get(pk=request.POST['category'])
+            if category != ticket.category:
+                changes.append(f"Category: {ticket.category.name} -> {category.name}")
+        if request.POST['status']:
             if not Status.objects.filter(pk=request.POST['status']).exists():
                 return JsonResponse({'error': 'Invalid status value'}, status=400)
-            status_name = Status.objects.get(pk=request.POST['status']).name
-            changes.append(f"Status: {ticket.status.name} -> {status_name}")
+            status = Status.objects.get(pk=request.POST['status'])
+            if status != ticket.status:
+                changes.append(f"Status: {ticket.status.name} -> {status.name}")
         if request.POST['title'] != ticket.title:
             changes.append(f"Title: {ticket.title} -> {request.POST['title']}")
         if request.POST['description'] != ticket.description:
