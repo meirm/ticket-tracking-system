@@ -20,8 +20,10 @@ from django.urls.conf import include
 from tickets import urls as tickets_urls
 from accounts import urls as accounts_urls
 from pages import urls as pages_urls
+from graphene_django.views import GraphQLView
 
 urlpatterns = [
+    path("graphql", GraphQLView.as_view(graphiql=True)),
     path('', include(pages_urls)),
     path('accounts/', include(accounts_urls)),
     path('tickets/', include(tickets_urls)),
