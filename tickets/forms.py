@@ -18,9 +18,15 @@ class TicketForm(forms.ModelForm):
         self.fields['priority'].widget.attrs.update({'class': 'form-control'})
         self.fields['category'].widget.attrs.update({'class': 'form-control'})
         self.fields['status'].widget.attrs.update({'class': 'form-control'})
-        # We want to be able to assign only to active users
-        self.fields['assignee'].queryset = self.fields['assignee'].queryset.filter(is_active=True).order_by('username')
         self.fields['due_date'].widget.attrs.update({'class': 'form-control'})
+        # We want to be able to assign only to active users
+        self.fields['assignee'].queryset = self.fields['assignee'].queryset.filter(is_active=True).prefetch_related('groups').order_by('groups__name', 'username')
+        
+        def label_from_instance(user):
+            group = user.groups.first().name if user.groups.exists() else 'No Group'
+            return f"{group}:{user.username}"
+
+        self.fields['assignee'].label_from_instance = label_from_instance
         
 class CommentForm(forms.ModelForm):
     class Meta:
