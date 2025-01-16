@@ -19,7 +19,7 @@ class TicketForm(forms.ModelForm):
         self.fields['category'].widget.attrs.update({'class': 'form-control'})
         self.fields['status'].widget.attrs.update({'class': 'form-control'})
         # We want to be able to assign only to active users
-        self.fields['assignee'].queryset = self.fields['assignee'].queryset.filter(is_active=True)
+        self.fields['assignee'].queryset = self.fields['assignee'].queryset.filter(is_active=True).order_by('username')
         self.fields['due_date'].widget.attrs.update({'class': 'form-control'})
         
 class CommentForm(forms.ModelForm):
