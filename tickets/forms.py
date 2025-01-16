@@ -26,7 +26,8 @@ class TicketForm(forms.ModelForm):
         self.fields['category'].widget.attrs.update({'class': 'form-control'})
         self.fields['status'].widget.attrs.update({'class': 'form-control'})
         self.fields['due_date'].widget.attrs.update({'class': 'form-control'})
-        self.fields['assigned_group'].queryset = Group.objects.all().order_by('name')
+        # We need to filter to only show groups that have users
+        self.fields['assigned_group'].queryset = Group.objects.all().order_by('name').filter(user__is_active=True).distinct()
 
         # Initialize assignee queryset
         self.fields['assignee'].queryset = User.objects.filter(is_active=True).order_by('username')
