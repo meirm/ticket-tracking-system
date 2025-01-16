@@ -12,4 +12,42 @@
 	<br/>
 	<br/>
     <a href="{% url 'tickets:ticket_detail' ticket.id %}">Back to detail</a>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const assignedGroupSelect = document.getElementById('id_assigned_group');
+            const assigneeSelect = document.getElementById('id_assignee');
+
+            assignedGroupSelect.addEventListener('change', function() {
+                const groupId = this.value;
+                if (groupId) {
+                    fetch(`/tickets/api/v1/load-users/?group_id=${groupId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            // Clear existing assignee options
+                            assigneeSelect.innerHTML = '<option value="">---------</option>';
+                            
+                            // Populate assignee dropdown with new users
+                            data.users.forEach(user => {
+                                const option = document.createElement('option');
+                                option.value = user.id;
+                                option.textContent = `${user.username}`;
+                                assigneeSelect.appendChild(option);
+                            });
+                        })
+                        .catch(error => {
+                            console.error('Error fetching users:', error);
+                        });
+                } else {
+                    // If no group is selected, reset assignee dropdown
+                    assigneeSelect.innerHTML = '<option value="">---------</option>';
+                }
+            });
+
+            // Trigger change event on page load if a group is already selected
+            if (assignedGroupSelect.value) {
+                const event = new Event('change');
+                assignedGroupSelect.dispatchEvent(event);
+            }
+        });
+    </script>
 {% endblock %}

@@ -33,4 +33,5 @@ urlpatterns = [
     path('api/v1/edit/<int:ticket_id>/', views.api_ticket_edit, name='api_ticket_edit'),
     path('api/v1/create/', views.api_ticket_create, name='api_ticket_create'),
     path('api/v1/add_comment/<int:ticket_id>/', views.api_add_comment, name='api_ticket_add_comment'),
+    path('api/v1/load-users/', views.load_users, name='ajax_load_users'),
 ]

@@ -22,6 +22,7 @@
                 <th scope="col">ID</th>
                 <th scope="col">Title</th>
                 <th scope="col">Assigned</th>
+                <th scope="col">Group</th>
                 <th scope="col">Category</th>
                 <th scope="col">Priority</th>
                 <th scope="col">Status</th>
@@ -36,6 +37,7 @@
                 <th>{{ ticket.id }}</th>
                 <td><a href="{% url 'tickets:ticket_detail' ticket.id %}">{{ ticket.title }}</a></td>
                 <td>{{ ticket.assignee }}</td>
+                <td>{{ ticket.assigned_group }}</td>
                 <td>{{ ticket.category }}</td>
                 <!-- Apply colors based on priority -->
                 <td>

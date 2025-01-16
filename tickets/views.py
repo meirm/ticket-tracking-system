@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect
 from .models import Changes, Ticket, Category, Status, Priority
 from .forms import TicketForm, CommentForm
 # Restrict access to the index view to authenticated users only.
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django.contrib import messages
 from django.core.paginator import Paginator
 from .statistics import Statistics
@@ -50,11 +50,23 @@ def filter_ticket(request, ticket):
     elif request.user.groups.filter(name='Admin').exists():
         pass
     else:
-        if ticket.assignee == request.user:
+        if ticket.assignee == request.user or ticket.issuer == request.user:
+            pass
+        elif ticket.assigned_group and can_view_group_tickets(request.user, ticket.assigned_group.id):
             pass
         else:
             return None
     return ticket
+
+
+@login_required
+def load_users(request):
+    group_id = request.GET.get('group_id')
+    if group_id:
+        users = User.objects.filter(groups__id=group_id, is_active=True).order_by('username')
+        user_list = [{'id': user.id, 'username': user.username} for user in users]
+        return JsonResponse({'users': user_list})
+    return JsonResponse({'users': []})
 
 def api_auth_required(view_func):
     @wraps(view_func)
@@ -520,10 +532,20 @@ def edit_ticket(request, ticket_id):
             status = Status.objects.get(pk=request.POST['status'])
             if status != ticket.status:
                 changes.append(f"Status: {ticket.status.name} -> {status.name}")
+        if request.POST['assigned_group']:
+            if not Group.objects.filter(pk=request.POST['assigned_group']).exists():
+                return JsonResponse({'error': 'Invalid group value'}, status=400)
+            assigned_group = Group.objects.get(pk=request.POST['assigned_group'])
+            if ticket.assigned_group is None:
+                changes.append(f"Assigned group: None -> {assigned_group.name}")
+            elif assigned_group != ticket.assigned_group:
+                changes.append(f"Assigned group: {ticket.assigned_group.name} -> {assigned_group.name}")
+                
         if request.POST['title'] != ticket.title:
             changes.append(f"Title: {ticket.title} -> {request.POST['title']}")
         if request.POST['description'] != ticket.description:
             changes.append(f"Description: {ticket.description} -> {request.POST['description']}")
+       
         
         # we have an issue with the date format, it is  reporting Due date: 2024-10-08 00:00:00+00:00 -> 2024-10-08 when actually the date is 2024-10-08 00:00:00
         # we need to fix this, we can use the date filter to format the date
@@ -543,6 +565,7 @@ def edit_ticket(request, ticket_id):
         ticket.category = Category.objects.get(pk=request.POST['category'])
         ticket.assignee = User.objects.get(pk=request.POST['assignee'])
         ticket.status = Status.objects.get(pk=request.POST['status'])
+        ticket.assigned_group = Group.objects.get(pk=request.POST['assigned_group'])
         if request.POST['due_date'] != "":
             ticket.due_date = request.POST['due_date']
         ticket.save()
