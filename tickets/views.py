@@ -102,6 +102,8 @@ def api_add_comment(request, ticket_id):
     return JsonResponse({'ticket_id': ticket.id})
 
 
+
+
 @csrf_exempt
 @api_auth_required
 def api_ticket_edit(request, ticket_id):
@@ -290,7 +292,13 @@ def pull_request(request):
             open_bugs = filter_tickets(request, open_bugs)
             return JsonResponse({
                                  'tickets': [{"id":ticket.pk, "title": ticket.title, "status": "new" if ticket.status.name == "Open" else "known" } for ticket in open_bugs]
-                                 })   
+                                 })  
+
+def privacy_view(request):
+    return render(request, 'tickets/privacy.html') 
+
+def terms_view(request):
+    return render(request, 'tickets/terms.html')
 
 @login_required
 def help_view(request):
