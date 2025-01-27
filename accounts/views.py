@@ -54,7 +54,7 @@ def api_key_create(request):
             api_key.save()
             messages.success(request, 'API key created successfully.')
             log_activity(request.user, 'CREATE', level='INFO', log='API key created.')
-            return redirect('accounts:api_key')
+            return redirect('accounts:api_keys')
         
 
 def login_view(request):
