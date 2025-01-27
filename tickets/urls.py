@@ -30,7 +30,6 @@ urlpatterns = [
     path('<int:ticket_id>/comment/<int:comment_id>/upvote/', views.upvote_comment, name='upvote_comment'),
     path('<int:ticket_id>/comment/<int:comment_id>/downvote/', views.downvote_comment, name='downvote_comment'),
     # Add api urls
-    path('api/v1/push-event', views.push_event, name='api_push_event'),
     path('api/v1/list/', views.api_list_tickets, name='api_ticket_list'),
     path('api/v1/detail/<int:ticket_id>/', views.api_ticket_detail, name='api_ticket_detail'),
     path('api/v1/edit/<int:ticket_id>/', views.api_ticket_edit, name='api_ticket_edit'),

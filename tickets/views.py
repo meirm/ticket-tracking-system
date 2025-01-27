@@ -155,11 +155,6 @@ def api_ticket_create(request):
     return JsonResponse({'ticket_id': ticket.id})
 
 @api_auth(required=True)
-def push_event(request):
-    # This is a dummy endpoint that can be used to trigger a push event to the frontend
-    return JsonResponse({'message': 'Event pushed successfully'})
-
-@api_auth(required=True)
 def api_list_tickets(request):
     # Filter tickets based on request parameters
     filter = {}
