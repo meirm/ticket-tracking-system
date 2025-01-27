@@ -13,6 +13,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required, permission_required
 from tickets.authorization import can_view_group_tickets
 from accounts.auth import api_auth
+import json 
+
 def filter_tickets(request, ticket_list):
     if request.user.groups.filter(name='Untrusted').exists():
         ticket_list = ticket_list.filter(assignee=request.user) | ticket_list.filter(issuer=request.user)
@@ -136,21 +138,27 @@ def api_ticket_edit(request, ticket_id):
 @csrf_exempt
 @api_auth(required=True)
 def api_ticket_create(request):
-    if not Priority.objects.filter(name=request.POST['priority']).exists():
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    print(data)
+    if not Priority.objects.filter(name=data.get('priority', "Low")).exists():
         return JsonResponse({'error': 'Invalid priority value'}, status=400)
-    if not Status.objects.filter(name=request.POST['status']).exists():
+    if not Status.objects.filter(name=data.get('status', "Open")).exists():
         return JsonResponse({'error': 'Invalid status value'}, status=400)
-    if not Category.objects.filter(name=request.POST['category']).exists():
+    if not Category.objects.filter(name=data.get('category',"Support")).exists():
         return JsonResponse({'error': 'Invalid category value'}, status=400)
     ticket = Ticket.objects.create(
         issuer=request.user,
-        assignee=User.objects.get(pk=request.POST['assignee']),
-        title=request.POST['title'],
-        description=request.POST['description'],
-        status=Priority.objects.filter(name=request.POST['status']).first(),
-        priority=Priority.objects.filter(name=request.POST['priority']).first(),
-        category=Category.objects.filter(name=request.POST['category']).first(),
-        due_date=request.POST['due_date']
+        assigned_group=Group.objects.get(pk=data.get('assigned_group', None)),
+        assignee=User.objects.get(username=data.get('assignee', request.user.username)),
+        title=data.get('title',"without title"),
+        description=data.get('description',"without description"),
+        status=Status.objects.filter(name=data.get('status',"Open")).first(),
+        priority=Priority.objects.filter(name=data.get('priority',"Low")).first(),
+        category=Category.objects.filter(name=data.get('category',"Support")).first(),
+        due_date=data.get('due_date', None)
     )
     return JsonResponse({'ticket_id': ticket.id})
 
