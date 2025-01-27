@@ -1,5 +1,5 @@
 from django import forms
-
+from .models import ApiKey
 class LoginForm(forms.Form):
     fields = ['username', 'password']
     username = forms.CharField(max_length=150, required=True, widget=forms.TextInput(attrs={'class': 'form-control'}))
@@ -24,3 +24,10 @@ class PasswordChangeForm(forms.Form):
         if new_password != confirm_password:
             raise forms.ValidationError('New password and confirm password do not match.')
         return cleaned_data
+    
+class ApiKeyForm(forms.Form):
+    fields = ['application']
+    application = forms.CharField(max_length=150, required=True, widget=forms.TextInput(attrs={'class': 'form-control'}))
+
+    def save(self, user):
+        api_key = ApiKey(user=user, application=self.cleaned_data.get('application'))

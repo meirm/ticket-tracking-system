@@ -12,13 +12,7 @@ from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required, permission_required
 from tickets.authorization import can_view_group_tickets
-
-# You could store API keys in settings or a more secure storage like a database
-VALID_API_KEYS = {
-    'your-api-key-1': 'Your username',
-    'your-api-key-2': 'Another username',
-}
-
+from accounts.auth import api_auth
 def filter_tickets(request, ticket_list):
     if request.user.groups.filter(name='Untrusted').exists():
         ticket_list = ticket_list.filter(assignee=request.user) | ticket_list.filter(issuer=request.user)
@@ -68,24 +62,9 @@ def load_users(request):
         return JsonResponse({'users': user_list})
     return JsonResponse({'users': []})
 
-def api_auth_required(view_func):
-    @wraps(view_func)
-    def _wrapped_view(request, *args, **kwargs):
-        # Get API key from request headers or query params
-        api_key = request.headers.get('X-API-AUTH') or request.GET.get('api_key')
-        
-        if api_key and api_key in VALID_API_KEYS:
-            user = User.objects.get(username=VALID_API_KEYS[api_key])
-            request.user = user
-            return view_func(request, *args, **kwargs)
-        
-        # If no valid API key is provided
-        return JsonResponse({'error': 'Unauthorized. Invalid or missing API key.'}, status=401)
-
-    return _wrapped_view
 # API for listing all tickets (in JSON format)
 @csrf_exempt
-@api_auth_required
+@api_auth(required=True)
 def api_add_comment(request, ticket_id):
     try:
         ticket = Ticket.objects.get(pk=ticket_id)
@@ -105,7 +84,7 @@ def api_add_comment(request, ticket_id):
 
 
 @csrf_exempt
-@api_auth_required
+@api_auth(required=True)
 def api_ticket_edit(request, ticket_id):
     try:
         ticket = Ticket.objects.get(pk=ticket_id)
@@ -155,7 +134,7 @@ def api_ticket_edit(request, ticket_id):
     return JsonResponse({'ticket_id': ticket.id, 'actions': actions, "success": True})
 
 @csrf_exempt
-@api_auth_required
+@api_auth(required=True)
 def api_ticket_create(request):
     if not Priority.objects.filter(name=request.POST['priority']).exists():
         return JsonResponse({'error': 'Invalid priority value'}, status=400)
@@ -175,8 +154,12 @@ def api_ticket_create(request):
     )
     return JsonResponse({'ticket_id': ticket.id})
 
-    
-@api_auth_required
+@api_auth(required=True)
+def push_event(request):
+    # This is a dummy endpoint that can be used to trigger a push event to the frontend
+    return JsonResponse({'message': 'Event pushed successfully'})
+
+@api_auth(required=True)
 def api_list_tickets(request):
     # Filter tickets based on request parameters
     filter = {}
@@ -221,7 +204,7 @@ def api_list_tickets(request):
     return JsonResponse({'tickets': tickets_data}, json_dumps_params={"indent":2}, safe=False)
 
 # API for ticket details
-@api_auth_required
+@api_auth(required=True)
 def api_ticket_detail(request, ticket_id):
     try:
         ticket = Ticket.objects.get(pk=ticket_id)

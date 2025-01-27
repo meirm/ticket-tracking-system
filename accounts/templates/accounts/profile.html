@@ -10,6 +10,8 @@
         {{ form.as_p }}
         <button type="submit" class="btn btn-outline-success">Update</button>
     </form>
+    <h3>Api Keys</h3>
+    <a href="{% url 'accounts:api_keys' %}">Api Keys</a>
     <h3>Change Password</h3>
     <a href="{% url 'accounts:password_change' %}">Change Password</a>
 {% endblock %}

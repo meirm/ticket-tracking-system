@@ -6,11 +6,56 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from .forms import LoginForm, PasswordChangeForm, ProfileForm
 from .utils import log_activity
 from django.core.paginator import Paginator
-from .models import Activity
+from .models import Activity, ApiKey
+from .forms import ApiKeyForm
 
+@login_required
+def api_key_view(request):
+    keys = ApiKey.objects.filter(user=request.user)
+    return render(request, 'accounts/api_keys.html', {'keys': keys,'form': ApiKeyForm()})
+
+@login_required
+def api_key_delete(request, key):
+    key = ApiKey.objects.get(key=key)
+    key.delete()
+    messages.success(request, 'API key deleted successfully.')
+    log_activity(request.user, 'DELETE', level='INFO', log='API key deleted.')
+    return redirect('accounts:api_keys')
+
+@login_required
+def api_key_activate(request, key):
+    key = ApiKey.objects.get(key=key)
+    key.activate()
+    messages.success(request, 'API key activated successfully.')
+    log_activity(request.user, 'UPDATE', level='INFO', log='API key activated.')
+    return redirect('accounts:api_keys')
+
+@login_required
+def api_key_deactivate(request, key):
+    key_id = request.GET.get('key_id')
+    key = ApiKey.objects.get(key=key)
+    key.deactivate()
+    messages.success(request, 'API key deactivated successfully.')
+    log_activity(request.user, 'UPDATE', level='INFO', log='API key deactivated.')
+    return redirect('accounts:api_keys')
+
+# allow only post access
+@login_required
+@require_POST
+def api_key_create(request):
+        form = ApiKeyForm(request.POST)
+        if form.is_valid():
+            api_key = ApiKey(application=form.cleaned_data.get('application'), 
+                             user=request.user)    
+            api_key.save()
+            messages.success(request, 'API key created successfully.')
+            log_activity(request.user, 'CREATE', level='INFO', log='API key created.')
+            return redirect('accounts:api_key')
+        
 
 def login_view(request):
     if request.method == 'POST':

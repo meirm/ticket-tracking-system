@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>Profile</h2>
+    <p>Username: {{ user.username }}</p>
+    <h2>Api Keys</h2>
+    <!-- list all available keys in a table-->
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Key</th>
+                <th>Application</th>
+                <th>Created</th>
+                <th>Enabled</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for key in keys %}
+                <tr>
+                    <td>{{ key.key }}</td>
+                    <td>{{ key.application }}</td>
+                    <td>{{ key.created_at }}</td>
+                    <td>{{ key.active }}</td>
+                    <td>
+                        {% if key.active %}
+                            <a href="{% url 'accounts:api_key_disable' key.key %}" class="btn btn-outline-warning">Disable</a>
+                        {% else %}
+                            <a href="{% url 'accounts:api_key_enable' key.key %}" class="btn btn-outline-primary">Enable</a>
+                        {% endif %}
+                        <a href="{% url 'accounts:api_key_delete' key.key %}" class="btn btn-outline-danger">Delete</a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+
+    <h3>Create a new api key</h3>
+    <form method="post" class="form-inline" style="margin-bottom: 20px;" action="{% url 'accounts:api_key_create' %}">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-outline-success">Generate new key</button>
+{% endblock %}
