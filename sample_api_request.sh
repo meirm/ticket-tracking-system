@@ -2,12 +2,7 @@
 WEBHOOK_URL="http://localhost:9000/tickets/api/v1/create/"
 
 
-if [ -z "$API_KEY" ]; then
-    echo "API_KEY is not set"
-    exit 1
-fi
-
-while getopts "t:d:p:c:g:a:s:he" opt; do
+while getopts "t:d:p:c:g:a:s:w:k:he" opt; do
 case ${opt} in
     t )
       title=$OPTARG
@@ -30,6 +25,12 @@ case ${opt} in
     s)
       status=$OPTARG
       ;;
+    w )
+      WEBHOOK_URL=$OPTARG
+      ;;
+    k )
+      API_KEY=$OPTARG
+      ;;
     h )
       echo "Usage: cmd [-t title] [-d description] [-p priority] [-c category] [-g assigned_group] [-a assignee] [-s status]" 1>&2
       echo "Default values: priority=High, category=Support, assigned_group=staff, assignee=meirm" 1>&2
@@ -46,6 +47,11 @@ case ${opt} in
   esac
 done
 
+
+if [ -z "$API_KEY" ]; then
+    echo "API_KEY is not set"
+    exit 1
+fi
 
 
 # set default values

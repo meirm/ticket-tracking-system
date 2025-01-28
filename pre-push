@@ -1,12 +1,48 @@
 #!/bin/bash
 
+while getopts "h" opt; do
+  case ${opt} in
+    h )
+      echo "Usage: pre-push [-h]"
+      echo "  -h  Display help"
+      echo "You need to have the TTS_API_KEY and TTS_WEBHOOK_URL set in the .env file"
+      echo "You can also set TTS_CATEGORY, TTS_PRIORITY, TTS_ASSIGNED_GROUP, TTS_ASSIGNEE, TTS_STATUS in the .env file"
+      exit 0
+      ;;
+    \? )
+      echo "Invalid Option: -$OPTARG" 1>&2
+      exit 1
+      ;;
+  esac
+done
 # Define the webhook URL
 WEBHOOK_URL="http://localhost:9000/tickets/api/v1/create/"
 
-if [ -z "$API_KEY" ]; then
-    echo "API_KEY is not set"
+# Load API_KEY from .env
+ENV_FILE=".env"
+
+if [ -f "$ENV_FILE" ]; then
+    TTS_API_KEY=$(grep ^TTS_API_KEY= "$ENV_FILE" | cut -d '=' -f2)
+    TTS_WEBHOOK_URL=$(grep ^TTS_WEBHOOK_URL= "$ENV_FILE" | cut -d '=' -f2)
+    TTS_CATEGORY=$(grep ^TTS_CATEGORY= "$ENV_FILE" | cut -d '=' -f2)
+    TTS_STATUS=$(grep ^TTS_STATUS= "$ENV_FILE" | cut -d '=' -f2)
+    TTS_PRIORITY=$(grep ^TTS_PRIORITY= "$ENV_FILE" | cut -d '=' -f2)
+    TTS_ASSIGNED_GROUP=$(grep ^TTS_ASSIGNED_GROUP= "$ENV_FILE" | cut -d '=' -f2)
+    TTS_ASSIGNEE=$(grep ^TTS_ASSIGNEE= "$ENV_FILE" | cut -d '=' -f2)
+else
+    echo ".env file not found"
     exit 1
 fi
+if [ -z "$TTS_API_KEY" ]; then
+    echo "API_KEY is not set in .env"
+    exit 1
+fi
+if [ -z "$TTS_WEBHOOK_URL" ]; then
+    echo "WEBHOOK_URL is not set in .env"
+    exit 1
+fi
+
+
 # Get the repository name from the remote URL
 REPO_NAME=$(basename `git rev-parse --show-toplevel`)
 
@@ -20,20 +56,29 @@ TITLE_TEMPLATE="Push to $REPO_NAME:$BRANCH_NAME"
 
 BODY_TEMPLATE=$(echo -e "Push to $REPO_NAME:$BRANCH_NAME\n\nChanges:\n$CHANGES")
 
-PRIORITY="Low"
+PRIORITY=${TTS_PRIORITY:-"High"}
+
+ASSIGNED_GROUP=${TTS_ASSIGNED_GROUP:-"staff"}
+
+ASSIGNEE=${TTS_ASSIGNEE:-"meirm"}
+
+CATEGORY=${TTS_CATEGORY:-"Support"}
+
+STATUS=${TTS_STATUS:-"Draft"}
 
 PAYLOAD=$(jq -n \
   --arg title "$TITLE_TEMPLATE" \
   --arg description "$BODY_TEMPLATE" \
   --arg priority "$PRIORITY" \
-  --arg category "Support" \
-  --arg assigned_group "staff" \
-  --arg assignee "meirm" \
-  '{title: $title, description: $description, priority: $priority, category: $category, assigned_group: $assigned_group, assignee: $assignee, status: "Open"}')
+  --arg category "$CATEGORY" \
+  --arg assigned_group "$ASSIGNED_GROUP" \
+  --arg assignee "$ASSIGNEE" \
+  --arg status "$STATUS" \
+  '{title: $title, description: $description, priority: $priority, category: $category, assigned_group: $assigned_group, assignee: $assignee, status: $status}')
 
 echo $PAYLOAD
 # Send the data via curl to the webhook URL
-curl -v -H "X-API-AUTH: $API_KEY" -H "Content-Type: application/json" --data "$PAYLOAD" "$WEBHOOK_URL"
+curl -v -H "X-API-AUTH: $TTS_API_KEY" -H "Content-Type: application/json" --data "$PAYLOAD" "$TTS_WEBHOOK_URL"
 
 # Check if the curl request was successful
 if [ $? -ne 0 ]; then
