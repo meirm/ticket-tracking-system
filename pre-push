@@ -18,7 +18,7 @@ CHANGES=$(git diff --name-only HEAD @{u})
 
 TITLE_TEMPLATE="Push to $REPO_NAME:$BRANCH_NAME"
 
-BODY_TEMPLATE=$(echo "Push to $REPO_NAME:$BRANCH_NAME\n\nChanges:\n$CHANGES")
+BODY_TEMPLATE=$(echo -e "Push to $REPO_NAME:$BRANCH_NAME\n\nChanges:\n$CHANGES")
 
 PRIORITY="Low"
 
