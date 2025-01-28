@@ -151,7 +151,7 @@ def api_ticket_create(request):
         return JsonResponse({'error': 'Invalid category value'}, status=400)
     ticket = Ticket.objects.create(
         issuer=request.user,
-        assigned_group=Group.objects.get(pk=data.get('assigned_group', None)),
+        assigned_group=Group.objects.get(name=data.get('assigned_group', None)),
         assignee=User.objects.get(username=data.get('assignee', request.user.username)),
         title=data.get('title',"without title"),
         description=data.get('description',"without description"),
