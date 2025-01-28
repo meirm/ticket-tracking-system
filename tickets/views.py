@@ -142,7 +142,6 @@ def api_ticket_create(request):
         data = json.loads(request.body)
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
-    print(data)
     if not Priority.objects.filter(name=data.get('priority', "Low")).exists():
         return JsonResponse({'error': 'Invalid priority value'}, status=400)
     if not Status.objects.filter(name=data.get('status', "Open")).exists():
