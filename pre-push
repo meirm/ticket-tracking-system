@@ -1,0 +1,44 @@
+#!/bin/bash
+
+# Define the webhook URL
+WEBHOOK_URL="http://localhost:9000/tickets/api/v1/create/"
+
+if [ -z "$API_KEY" ]; then
+    echo "API_KEY is not set"
+    exit 1
+fi
+# Get the repository name from the remote URL
+REPO_NAME=$(basename `git rev-parse --show-toplevel`)
+
+# Get the branch name
+BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+
+# Get the list of changes in the push
+CHANGES=$(git diff --name-only HEAD @{u})
+
+TITLE_TEMPLATE="Push to $REPO_NAME:$BRANCH_NAME"
+
+BODY_TEMPLATE=$(echo "Push to $REPO_NAME:$BRANCH_NAME\n\nChanges:\n$CHANGES")
+
+PRIORITY="Low"
+
+PAYLOAD=$(jq -n \
+  --arg title "$TITLE_TEMPLATE" \
+  --arg description "$BODY_TEMPLATE" \
+  --arg priority "$PRIORITY" \
+  --arg category "Support" \
+  --arg assigned_group "staff" \
+  --arg assignee "meirm" \
+  '{title: $title, description: $description, priority: $priority, category: $category, assigned_group: $assigned_group, assignee: $assignee, status: "Open"}')
+
+echo $PAYLOAD
+# Send the data via curl to the webhook URL
+curl -v -H "X-API-AUTH: $API_KEY" -H "Content-Type: application/json" --data "$PAYLOAD" "$WEBHOOK_URL"
+
+# Check if the curl request was successful
+if [ $? -ne 0 ]; then
+    echo "Failed to notify webhook, aborting push"
+    exit 1
+fi
+
+exit 0
