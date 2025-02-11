@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
+{% load tz %}
+{% load humanize %}
 {% block title %}Tickets{% endblock %}
 {% block content %}
 
@@ -32,6 +34,7 @@
             </tr>
         </thead>
         <tbody class="table-group-divider">
+        {% timezone user.userprofile.timezone %}
         {% for ticket in tickets %}
             <tr>
                 <th>{{ ticket.id }}</th>
@@ -53,9 +56,9 @@
                 </td>
 
                 <td>{{ ticket.status }}</td>
-                <td>{{ ticket.created_at }}</td>
-                <td>{{ ticket.updated_at }}</td>
-                <td>{{ ticket.due_date }}</td>
+                <td>{{ ticket.created_at|date:"Y-m-d H:i:s" }}</td>
+                <td>{{ ticket.updated_at|date:"Y-m-d H:i:s" }}</td>
+                <td>{{ ticket.due_date|date:"Y-m-d H:i:s" }}</td>
             </tr>
         {% endfor %}
         </tbody>

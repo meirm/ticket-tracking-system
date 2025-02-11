@@ -1,7 +1,11 @@
 {% extends "base.html" %}
-
+{% load static %}
+{% load tz %}
+{% load humanize %}
+{% block title %}Ticket #{{ ticket.id }}{% endblock %}
 {% block content %}
 {% include "tickets/header.html" %}
+{% timezone user.userprofile.timezone %}
 <div class="container mt-4">
     <div class="card">
         <div class="card-header d-flex justify-content-between">
@@ -29,10 +33,10 @@
 
         <div class="card-footer text-muted">
             <div>
-                <strong>Created by:</strong> {{ ticket.issuer }} <br>
-                <strong>Created at:</strong> {{ ticket.created_at }} <br>
-                <strong>Last updated:</strong> {{ ticket.updated_at }}<br>
-                <strong>Due date:</strong> {{ ticket.due_date }} <br>
+                <strong>Created by:</strong> {{ ticket.issuer|date:"Y-m-d H:i:s" }} <br>
+                <strong>Created at:</strong> {{ ticket.created_at|date:"Y-m-d H:i:s" }} <br>
+                <strong>Last updated:</strong> {{ ticket.updated_at|date:"Y-m-d H:i:s" }}<br>
+                <strong>Due date:</strong> {{ ticket.due_date|date:"Y-m-d H:i:s" }} <br>
             </div>
         </div>
     </div>
@@ -48,7 +52,7 @@
         <ul class="list-group list-group-flush">
             {% for comment in comments %}
             <li class="list-group-item">
-                <strong>@{{ comment.author }}</strong> ({{ comment.created_at }}):<br>
+                <strong>@{{ comment.author }}</strong> ({{ comment.created_at|date:"Y-m-d H:i:s" }}):<br>
                 <textarea class="form-control" rows="3" readonly>{{ comment.comment }}</textarea>
             </li>
             {% empty %}

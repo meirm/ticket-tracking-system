@@ -10,7 +10,7 @@ from django.views.decorators.http import require_POST
 from .forms import LoginForm, PasswordChangeForm, ProfileForm
 from .utils import log_activity
 from django.core.paginator import Paginator
-from .models import Activity, ApiKey
+from .models import Activity, ApiKey, UserProfile
 from .forms import ApiKeyForm
 
 @login_required
@@ -115,14 +115,17 @@ def logout_view(request):
 
 @login_required
 def profile_view(request):
+    user = request.user
+    user_profile = UserProfile.objects.get(user=user)
     if request.method == 'POST':
-        user = request.user
         user.first_name = request.POST['first_name']
         user.last_name = request.POST['last_name']
         user.email = request.POST['email']
+        user_profile.timezone = request.POST['timezone']
         user.save()
+        user_profile.save()
         messages.success(request, 'Profile updated successfully.')
-    return render(request, 'accounts/profile.html', {'form': ProfileForm({'first_name': request.user.first_name, 'last_name': request.user.last_name, 'email': request.user.email})})
+    return render(request, 'accounts/profile.html', {'form': ProfileForm({'first_name': request.user.first_name, 'last_name': request.user.last_name, 'email': request.user.email, 'timezone': user_profile.timezone})})
 
 
 @login_required

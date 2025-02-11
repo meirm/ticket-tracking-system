@@ -2,6 +2,7 @@ import hashlib
 import time
 from django.db import models
 from django.contrib.auth.models import User
+import pytz
 
 # Create your models here.
 class Activity(models.Model):
@@ -24,6 +25,15 @@ class Activity(models.Model):
     log = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     
+
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    timezone = models.CharField(
+        max_length=50,
+        choices=[(tz, tz) for tz in pytz.all_timezones],
+        default='UTC'
+    )
 
 class ApiKey(models.Model):
     # the user should be able to have multiple api keys, each for different applications

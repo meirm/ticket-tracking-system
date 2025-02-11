@@ -6,10 +6,11 @@ class LoginForm(forms.Form):
     password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control'}))
     
 class ProfileForm(forms.Form):
-    fields = ['first_name', 'last_name', 'email']
+    fields = ['first_name', 'last_name', 'email', 'timezone']
     first_name = forms.CharField(max_length=150, required=True, widget=forms.TextInput(attrs={'class': 'form-control'}))
     last_name = forms.CharField(max_length=150, required=True, widget=forms.TextInput(attrs={'class': 'form-control'}))
     email = forms.EmailField(max_length=150, required=True, widget=forms.EmailInput(attrs={'class': 'form-control'}))
+    timezone = forms.CharField(max_length=50, required=True, widget=forms.Select(attrs={'class': 'form-control'}))
     
 class PasswordChangeForm(forms.Form):
     fields = ['old_password', 'new_password', 'confirm_password']

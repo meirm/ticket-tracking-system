@@ -2,8 +2,9 @@ from django.db import models
 from django.forms import ValidationError
 
 
-class Tenant(models.Model):
+class Department(models.Model):
     name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, unique=True)
     subdomain = models.CharField(max_length=255, unique=True)
     
     def __str__(self):
@@ -14,6 +15,7 @@ class Category(models.Model):
     class Meta:
         verbose_name_plural = "categories"
     name = models.CharField(max_length=255)
+    department = models.ForeignKey(Department, on_delete=models.CASCADE)
     
     def __str__(self):
         return self.name
@@ -22,6 +24,7 @@ class Priority(models.Model):
     class Meta:
         verbose_name_plural = "priorities"
     name = models.CharField(max_length=255)
+    department = models.ForeignKey(Department, on_delete=models.CASCADE)
     
     def __str__(self):
         return self.name
@@ -30,6 +33,7 @@ class Status(models.Model):
     class Meta:
         verbose_name_plural = "statuses"
     name = models.CharField(max_length=255)
+    department = models.ForeignKey(Department, on_delete=models.CASCADE)
     # add a boolean field to indicate if the status is closed/cancelled/resolved/backlogged
     closed = models.BooleanField(default=False)
     
@@ -41,8 +45,8 @@ class Status(models.Model):
 # Create your models here.
 class Ticket(models.Model):
     issuer = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='issued_tickets')
-    assignee = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='assignee_tickets')
-    assigned_group = models.ForeignKey('auth.Group', on_delete=models.SET_NULL, null=True, blank=True)
+    assignee = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True)
+    assigned_group = models.ForeignKey('Department', on_delete=models.CASCADE)
     # Store *nix-like permissions in octal, e.g. 0o750
     permissions = models.PositiveSmallIntegerField(default=0o750)
     priority = models.ForeignKey(Priority, on_delete=models.CASCADE, default=1)
@@ -69,7 +73,7 @@ class Ticket(models.Model):
             return True
         
         # 2) Determine whether 'user' is the owner, group, or others
-        if user == self.assignee:
+        if self.assignee and user == self.assignee:
             # user bits => shift right by 6, then mask off bottom 3 bits
             bits = (self.permissions >> 6) & 0b111
         elif self.assigned_group and user.groups.filter(id=self.assigned_group.id).exists():

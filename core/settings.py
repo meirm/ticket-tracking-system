@@ -163,3 +163,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 GRAPHENE = {
     "SCHEMA": "core.schema.schema"
 }
+
+USE_TZ = True
+TIME_ZONE = 'UTC'
