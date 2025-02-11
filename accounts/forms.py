@@ -1,5 +1,7 @@
 from django import forms
 from .models import ApiKey
+import pytz
+
 class LoginForm(forms.Form):
     fields = ['username', 'password']
     username = forms.CharField(max_length=150, required=True, widget=forms.TextInput(attrs={'class': 'form-control'}))
@@ -10,7 +12,8 @@ class ProfileForm(forms.Form):
     first_name = forms.CharField(max_length=150, required=True, widget=forms.TextInput(attrs={'class': 'form-control'}))
     last_name = forms.CharField(max_length=150, required=True, widget=forms.TextInput(attrs={'class': 'form-control'}))
     email = forms.EmailField(max_length=150, required=True, widget=forms.EmailInput(attrs={'class': 'form-control'}))
-    timezone = forms.CharField(max_length=50, required=True, widget=forms.Select(attrs={'class': 'form-control'}))
+    # Add the choices=[(tz, tz) for tz in pytz.all_timezones],
+    timezone = forms.CharField(max_length=50, required=True, widget=forms.Select(attrs={'class': 'form-control'}, choices=[(tz, tz) for tz in pytz.all_timezones]))
     
 class PasswordChangeForm(forms.Form):
     fields = ['old_password', 'new_password', 'confirm_password']
