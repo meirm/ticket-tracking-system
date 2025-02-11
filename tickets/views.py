@@ -486,7 +486,7 @@ def new_ticket(request):
             due_date=due_date
         )
         log_activity(ticket, request.user, "Created ticket")
-        return render(request, 'tickets/ticket_detail.html', {'ticket': ticket})
+        return redirect('tickets:ticket_detail', ticket_id=ticket.id)
     else:
         return render(request, 'tickets/new_ticket.html', {"form": TicketForm()})
     
@@ -624,7 +624,7 @@ def edit_comment(request, ticket_id, comment_id):
         comment.save()
         messages.success(request, f'Comment updated successfully to ticket #{ticket_id}')
         log_activity(ticket, request.user, "Edited comment in ticket")
-        return render(request, 'tickets/ticket_detail.html', {'ticket': ticket})
+        return redirect('tickets:ticket_detail', ticket_id=ticket_id)
     else:
         return render(request, 'tickets/edit_comment.html', {'ticket': ticket, 'comment': comment})
     
@@ -637,21 +637,21 @@ def delete_comment(request, ticket_id, comment_id):
         return redirect('tickets:index')
     comment = ticket.comment_set.get(pk=comment_id)
     comment.delete()
-    return render(request, 'tickets/ticket_detail.html', {'ticket': ticket})
+    return redirect('tickets:ticket_detail', ticket_id=ticket_id)
 
 @login_required
 def upvote_ticket(request, ticket_id):
     ticket = Ticket.objects.get(pk=ticket_id)
     ticket.upvotes += 1
     ticket.save()
-    return render(request, 'tickets/ticket_detail.html', {'ticket': ticket})
+    return redirect('tickets:ticket_detail', ticket_id=ticket_id)
 
 @login_required
 def downvote_ticket(request, ticket_id):
     ticket = Ticket.objects.get(pk=ticket_id)
     ticket.downvotes += 1
     ticket.save()
-    return render(request, 'tickets/ticket_detail.html', {'ticket': ticket})
+    return redirect('tickets:ticket_detail', ticket_id=ticket_id)
 
 @login_required
 def upvote_comment(request, ticket_id, comment_id):
@@ -659,7 +659,7 @@ def upvote_comment(request, ticket_id, comment_id):
     comment = ticket.comment_set.get(pk=comment_id)
     comment.upvotes += 1
     comment.save()
-    return render(request, 'tickets/ticket_detail.html', {'ticket': ticket})
+    return redirect('tickets:ticket_detail', ticket_id=ticket_id)
 
 @login_required
 def downvote_comment(request, ticket_id, comment_id):
@@ -667,4 +667,4 @@ def downvote_comment(request, ticket_id, comment_id):
     comment = ticket.comment_set.get(pk=comment_id)
     comment.downvotes += 1
     comment.save()
-    return render(request, 'tickets/ticket_detail.html', {'ticket': ticket})
+    return redirect('tickets:ticket_detail', ticket_id=ticket_id)
