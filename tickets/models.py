@@ -46,7 +46,7 @@ class Status(models.Model):
 class Ticket(models.Model):
     issuer = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='issued_tickets')
     assignee = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True)
-    assigned_group = models.ForeignKey('Department', on_delete=models.CASCADE)
+    assigned_group = models.ForeignKey('auth.Group', on_delete=models.CASCADE)
     # Store *nix-like permissions in octal, e.g. 0o750
     permissions = models.PositiveSmallIntegerField(default=0o750)
     priority = models.ForeignKey(Priority, on_delete=models.CASCADE, default=1)
