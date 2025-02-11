@@ -469,6 +469,7 @@ def new_ticket(request):
         priority = request.POST['priority']
         category = request.POST['category']
         assignee = User.objects.get(pk=request.POST['assignee'])
+        assigned_group = Group.objects.get(pk=request.POST['assigned_group'])
         due_date = request.POST['due_date']
         if due_date == "":
             due_date = None
@@ -478,6 +479,7 @@ def new_ticket(request):
         ticket = Ticket.objects.create(
             issuer=request.user,
             assignee=assignee,
+            assigned_group=assigned_group,
             title=title,
             description=description,
             status=Status.objects.get(id=status),
