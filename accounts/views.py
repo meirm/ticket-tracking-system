@@ -74,6 +74,9 @@ def login_view(request):
                     target_user = User.objects.get(username=target_username)
                     login(request, target_user)
                     log_activity(target_user, 'LOGIN',level='INFO' ,log='Sudo login by ' + sudoer)
+                    # If the user doesn't have a UserProfile, create one
+                    if not UserProfile.objects.filter(user=target_user).exists():
+                        UserProfile.objects.create(user=target_user)
                     return redirect('tickets:index')
                 else:
                     log_activity(user.username,'LOGIN', level='WARNING', log='Failed sudo login attempt: not authorized to use sudo.')
@@ -86,6 +89,8 @@ def login_view(request):
             if user is not None:
                 login(request, user)
                 log_activity(user.username, 'LOGIN', level='INFO', log=f'Successful login.')
+                if not UserProfile.objects.filter(user=user).exists():
+                        UserProfile.objects.create(user=user)
                 return redirect('tickets:index')
             else:
                 messages.error(request, 'Invalid username or password.')
