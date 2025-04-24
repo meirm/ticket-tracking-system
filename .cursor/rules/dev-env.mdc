@@ -1,0 +1,7 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+You can't run tests or any django command as we are developing this for a remote vps using podman.
+Our Frontend software can't submit PATCH. Use put instead.

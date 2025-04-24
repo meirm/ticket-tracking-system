@@ -1,0 +1,149 @@
+.
+├── .cursor
+│   └── rules
+│       ├── bazaar-how-to-code.mdc
+│       ├── bazaar-workflow.mdc
+│       ├── dev-env.mdc
+│       ├── how-to-code.mdc
+│       ├── my-stack.mdc
+│       ├── project_structure.mdc
+│       ├── vectal.mdc
+│       └── workflow.mdc
+├── .env
+├── .env-example
+├── .gitignore
+├── .pre-commit-config.yaml
+├── Makefile
+├── RBAC_README.md
+├── README.md
+├── TODO.md
+├── ai_docs
+├── backend.Dockerfile
+├── backend_podman.Dockerfile
+├── base.Dockerfile
+├── base_podman.Dockerfile
+├── celery_beat.Dockerfile
+├── celery_beat_podman.Dockerfile
+├── celery_flower.Dockerfile
+├── celery_redis.Dockerfile
+├── celery_redis_podman.Dockerfile
+├── celery_worker.Dockerfile
+├── celery_worker_podman.Dockerfile
+├── contracts
+│   └── file_mng.md
+├── deleteme.ipynb
+├── docker-compose.yml
+├── docs
+│   ├── README.md
+│   ├── add_model_ordering_migration.py
+│   ├── apply_rbac_on_remote.md
+│   ├── auth_serializer_update.py
+│   ├── data_migration_script.py
+│   ├── permission_classes.py
+│   ├── permission_implementation.py
+│   ├── rbac_implementation_instructions.md
+│   ├── rbac_implementation_plan.md
+│   ├── rbac_implementation_summary.md
+│   ├── rbac_next_steps.md
+│   ├── rbac_policies.md
+│   ├── rbac_test_examples.py
+│   ├── rbac_test_plan.md
+│   ├── rbac_test_script.py
+│   ├── rbac_user_stories.md
+│   ├── support_ticket_api_contract.md
+│   ├── support_ticket_system.md
+│   ├── target_model_update.py
+│   ├── user_management_view.py
+│   ├── user_model_extension.py
+│   ├── user_model_implementation.py
+│   ├── verify_rbac_on_remote.py
+│   └── view_implementation.py
+├── generate_fake_cdr.py
+├── manual_fixes
+│   ├── fix_add_location_old_records.py
+│   └── fix_superuser_roles.py
+├── pinpoint
+│   ├── ai_docs
+│   │   └── policy_migration_plan.md
+│   ├── apps
+│   │   └── core
+│   │       ├── __init__.py
+│   │       ├── __pycache__
+│   │       ├── admin.py
+│   │       ├── apps.py
+│   │       ├── authentication.py
+│   │       ├── cdr_sample.json
+│   │       ├── cities.json
+│   │       ├── commands
+│   │       ├── constants.py
+│   │       ├── management
+│   │       ├── middleware.py
+│   │       ├── migrations
+│   │       ├── models.py
+│   │       ├── pagination.py
+│   │       ├── permission.py
+│   │       ├── policies.py
+│   │       ├── program_processing.py
+│   │       ├── receivers.py
+│   │       ├── serializers.py
+│   │       ├── signals.py
+│   │       ├── tasks.py
+│   │       ├── tests
+│   │       ├── urls.py
+│   │       ├── utils
+│   │       ├── validators.py
+│   │       ├── views
+│   │       ├── views.py
+│   │       └── views_legacy.py
+│   ├── config
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-312.pyc
+│   │   │   └── celery.cpython-312.pyc
+│   │   ├── asgi.py
+│   │   ├── celery.py
+│   │   ├── django.log
+│   │   ├── settings
+│   │   │   ├── __init__.py
+│   │   │   ├── __pycache__
+│   │   │   ├── base.py
+│   │   │   ├── develop.py
+│   │   │   ├── production.py
+│   │   │   ├── staging.py
+│   │   │   └── testing.py
+│   │   ├── urls.py
+│   │   └── wsgi.py
+│   ├── conftest.py
+│   ├── manage.py
+│   ├── pytest.ini
+│   ├── requirements.txt
+│   └── scripts
+│       ├── __init__.py
+│       ├── __pycache__
+│       │   ├── __init__.cpython-312.pyc
+│       │   └── env.cpython-312.pyc
+│       └── env.py
+├── podman_use.txt
+├── poetry.lock
+├── postgres.Dockerfile
+├── postgres_podman.Dockerfile
+├── pre-commit
+├── project_tree.txt
+├── pyproject.toml
+├── random_call_data.csv
+├── requirements-dev.txt
+├── requirements.txt
+├── scripts
+│   ├── __pycache__
+│   │   └── env.cpython-312.pyc
+│   ├── db_backup.sh
+│   ├── db_restore.sh
+│   ├── project_tree.sh
+│   ├── reload_backend_n_worker.sh
+│   ├── review_branch.sh
+│   ├── run_all_tests.sh
+│   ├── shell_backend.sh
+│   └── update_backend.sh
+└── version.txt
+
+26 directories, 121 files

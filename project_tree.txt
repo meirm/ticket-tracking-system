@@ -1,0 +1,183 @@
+.
+├── .cursor
+│   └── rules
+│       ├── bazaar-how-to-code.mdc
+│       ├── bazaar-workflow.mdc
+│       ├── dev-env.mdc
+│       ├── how-to-code.mdc
+│       ├── my-stack.mdc
+│       ├── project_structure.mdc
+│       ├── vectal.mdc
+│       └── workflow.mdc
+├── .dockerignore
+├── .env
+├── .env.sample
+├── .gitignore
+├── Dockerfile
+├── LICENSE
+├── Manual.md
+├── Manual.pdf
+├── README.md
+├── README.pdf
+├── TODO.md
+├── accounts
+│   ├── __init__.py
+│   ├── admin.py
+│   ├── apps.py
+│   ├── auth.py
+│   ├── forms.py
+│   ├── migrations
+│   │   ├── 0001_initial.py
+│   │   ├── 0002_apikey.py
+│   │   └── __init__.py
+│   ├── models.py
+│   ├── serializers.py
+│   ├── templates
+│   │   └── accounts
+│   │       ├── admin_board.html
+│   │       ├── api_keys.html
+│   │       ├── login.html
+│   │       ├── password_change.html
+│   │       └── profile.html
+│   ├── tests.py
+│   ├── urls.py
+│   ├── utils.py
+│   └── views.py
+├── core
+│   ├── __init__.py
+│   ├── asgi.py
+│   ├── schema.py
+│   ├── settings.py
+│   ├── templates
+│   │   ├── anon_base.html
+│   │   ├── base.html
+│   │   ├── messages.html
+│   │   └── navbar.html
+│   ├── urls.py
+│   └── wsgi.py
+├── data.json
+├── db.sqlite3
+├── docker-compose-mac.yml
+├── docker-compose.yml
+├── dump_db.sh
+├── gunicorn-cfg.py
+├── manage.py
+├── migration_psql.md
+├── migration_psql.pdf
+├── pages
+│   ├── __init__.py
+│   ├── admin.py
+│   ├── apps.py
+│   ├── models.py
+│   ├── templates
+│   │   └── pages
+│   │       └── landing_page.html
+│   ├── tests.py
+│   ├── urls.py
+│   └── views.py
+├── pre-push
+├── project_tree.txt
+├── push_to_prod.sh
+├── requirements.txt
+├── sample_api_request.sh
+├── sample_script.py
+├── screenshot.png
+├── static
+│   ├── css
+│   │   ├── bootstrap
+│   │   │   ├── bootstrap-grid.css
+│   │   │   ├── bootstrap-grid.css.map
+│   │   │   ├── bootstrap-grid.min.css
+│   │   │   ├── bootstrap-grid.min.css.map
+│   │   │   ├── bootstrap-grid.rtl.css
+│   │   │   ├── bootstrap-grid.rtl.css.map
+│   │   │   ├── bootstrap-grid.rtl.min.css
+│   │   │   ├── bootstrap-grid.rtl.min.css.map
+│   │   │   ├── bootstrap-reboot.css
+│   │   │   ├── bootstrap-reboot.css.map
+│   │   │   ├── bootstrap-reboot.min.css
+│   │   │   ├── bootstrap-reboot.min.css.map
+│   │   │   ├── bootstrap-reboot.rtl.css
+│   │   │   ├── bootstrap-reboot.rtl.css.map
+│   │   │   ├── bootstrap-reboot.rtl.min.css
+│   │   │   ├── bootstrap-reboot.rtl.min.css.map
+│   │   │   ├── bootstrap-utilities.css
+│   │   │   ├── bootstrap-utilities.css.map
+│   │   │   ├── bootstrap-utilities.min.css
+│   │   │   ├── bootstrap-utilities.min.css.map
+│   │   │   ├── bootstrap-utilities.rtl.css
+│   │   │   ├── bootstrap-utilities.rtl.css.map
+│   │   │   ├── bootstrap-utilities.rtl.min.css
+│   │   │   ├── bootstrap-utilities.rtl.min.css.map
+│   │   │   ├── bootstrap.css
+│   │   │   ├── bootstrap.css.map
+│   │   │   ├── bootstrap.min.css
+│   │   │   ├── bootstrap.min.css.map
+│   │   │   ├── bootstrap.rtl.css
+│   │   │   ├── bootstrap.rtl.css.map
+│   │   │   ├── bootstrap.rtl.min.css
+│   │   │   └── bootstrap.rtl.min.css.map
+│   │   └── site.css
+│   ├── favicon.ico
+│   ├── js
+│   │   ├── bootstrap
+│   │   │   ├── bootstrap.bundle.js
+│   │   │   ├── bootstrap.bundle.js.map
+│   │   │   ├── bootstrap.bundle.min.js
+│   │   │   ├── bootstrap.bundle.min.js.map
+│   │   │   ├── bootstrap.esm.js
+│   │   │   ├── bootstrap.esm.js.map
+│   │   │   ├── bootstrap.esm.min.js
+│   │   │   ├── bootstrap.esm.min.js.map
+│   │   │   ├── bootstrap.js
+│   │   │   ├── bootstrap.js.map
+│   │   │   ├── bootstrap.min.js
+│   │   │   └── bootstrap.min.js.map
+│   │   ├── clock.js
+│   │   ├── global_foot.js
+│   │   ├── global_head.js
+│   │   ├── jpost.js
+│   │   └── widgets.js
+│   └── openapi.json
+├── sync.sh
+├── tickets
+│   ├── __init__.py
+│   ├── admin.py
+│   ├── apps.py
+│   ├── authorization.py
+│   ├── forms.py
+│   ├── management
+│   │   └── commands
+│   │       ├── __init__.py
+│   │       ├── init_permissions.py
+│   │       ├── init_tickets.py
+│   │       └── tickup.py
+│   ├── migrations
+│   │   ├── 0001_initial.py
+│   │   ├── 0002_category_priority_status_ticket_assigned_group_and_more.py
+│   │   └── __init__.py
+│   ├── models.py
+│   ├── schema.py
+│   ├── static
+│   │   └── js
+│   │       └── tickets.js
+│   ├── statistics.py
+│   ├── templates
+│   │   └── tickets
+│   │       ├── changes.html
+│   │       ├── edit_ticket.html
+│   │       ├── header.html
+│   │       ├── help.html
+│   │       ├── index.html
+│   │       ├── new_comment.html
+│   │       ├── new_ticket.html
+│   │       ├── privacy.html
+│   │       ├── statistics.html
+│   │       ├── terms.html
+│   │       └── ticket_detail.html
+│   ├── tests.py
+│   ├── urls.py
+│   └── views.py
+└── wait-for-it.sh
+
+25 directories, 156 files

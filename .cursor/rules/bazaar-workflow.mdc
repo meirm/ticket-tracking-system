@@ -1,0 +1,13 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Model interaction workflow preferences (Based on *The Cathedral and the Bazaar*)
+- Focus strictly on the immediate query and context provided by the user.
+- Avoid introducing unrelated topics or extraneous technical details.
+- Refine responses iteratively: apply changes incrementally based on direct user feedback.
+- Consider broader dependencies: ensure that updates maintain consistency across responses.
+- Do not overhaul established, effective patterns unless explicitly requested.
+- Prioritize clear, structured, and consistent communication throughout interactions.
+- Monitor for and address potential issues promptly through active user engagement.
