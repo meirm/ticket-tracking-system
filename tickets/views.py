@@ -1,283 +1,123 @@
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
-from .models import Changes, Ticket, Category, Status, Priority
-from .forms import TicketForm, CommentForm
-# Restrict access to the index view to authenticated users only.
+from .models import Changes, Ticket, Category, Status, Priority, Comment
 from django.contrib.auth.models import User, Group
-from django.contrib import messages
-from django.core.paginator import Paginator
-from .statistics import Statistics
-from functools import wraps
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.decorators import login_required, permission_required
-from tickets.authorization import can_view_group_tickets
 from accounts.auth import api_auth
-import json 
-
-def filter_tickets(request, ticket_list):
-    if request.user.groups.filter(name='Untrusted').exists():
-        ticket_list = ticket_list.filter(assignee=request.user) | ticket_list.filter(issuer=request.user)
-    elif request.user.groups.filter(name='ReadOnly').exists():
-        pass
-    elif request.user.groups.filter(name='Admin').exists():
-        pass
-    else:
-        groups = request.user.groups.all()
-        for group in groups:
-            if group.permissions.filter(codename='can_view_all_tickets').exists():
-                pass
-            elif can_view_group_tickets(request.user, group.id):
-                ticket_list = ticket_list.filter(assigned_group=group) | ticket_list.filter(assignee=request.user) | ticket_list.filter(issuer=request.user)
-            elif group.permissions.filter(codename='can_view_own_tickets').exists():
-                ticket_list = ticket_list.filter(assignee=request.user) | ticket_list.filter(issuer=request.user)
-            else:
-                ticket_list = ticket_list.filter(assignee=request.user) | ticket_list.filter(issuer=request.user)
-    return ticket_list
-
-def filter_ticket(request, ticket):
-    if request.user.groups.filter(name='Untrusted').exists():
-        if ticket.assignee == request.user or ticket.assignee == request.user:
-            pass
-        else:
-            return None
-    elif request.user.groups.filter(name='ReadOnly').exists():
-        pass
-    elif request.user.groups.filter(name='Admin').exists():
-        pass
-    else:
-        if ticket.assignee == request.user or ticket.issuer == request.user:
-            pass
-        elif ticket.assigned_group and can_view_group_tickets(request.user, ticket.assigned_group.id):
-            pass
-        else:
-            return None
-    return ticket
-
-
-@login_required
-def load_users(request):
-    group_id = request.GET.get('group_id')
-    if group_id:
-        users = User.objects.filter(groups__id=group_id, is_active=True).order_by('username')
-        user_list = [{'id': user.id, 'username': user.username} for user in users]
-        return JsonResponse({'users': user_list})
-    return JsonResponse({'users': []})
-
-# API for listing all tickets (in JSON format)
-@csrf_exempt
-@api_auth(required=True)
-def api_add_comment(request, ticket_id):
-    try:
-        ticket = Ticket.objects.get(pk=ticket_id)
-    except Ticket.DoesNotExist:
-        return JsonResponse({'error': 'Ticket not found'}, status=404)
-    if 'comment' not in request.POST:
-        return JsonResponse({'error': 'Comment is required'}, status=400)
-    # Add comment
-    ticket.comments.create(
-        author=request.user,
-        comment=request.POST['comment']
-    )
-    log_activity(ticket, request.user, "Added comment to ticket")
-    return JsonResponse({'ticket_id': ticket.id})
-
-
-
-
-@csrf_exempt
-@api_auth(required=True)
-def api_ticket_edit(request, ticket_id):
-    try:
-        ticket = Ticket.objects.get(pk=ticket_id)
-    except Ticket.DoesNotExist:
-        return JsonResponse({'error': 'Ticket not found'}, status=404)
-    new_data = request.POST
-    actions = []
-    if 'priority' in new_data and not Priority.objects.filter(name=request.POST['priority']).exists():
-        return JsonResponse({'error': 'Invalid priority value'}, status=400)
-    if 'status' in new_data and not Status.objects.filter(name=request.POST['status']).exists():
-        return JsonResponse({'error': 'Invalid status value'}, status=400)
-    if 'category' in new_data and not Category.objects.filter(name=request.POST['category']).exists():
-        return JsonResponse({'error': 'Invalid category value'}, status=400)
-    if 'assignee' in new_data:
-        try:
-            new_assignee = User.objects.get(pk=request.POST['assignee'])
-        except User.DoesNotExist:
-            return JsonResponse({'error': 'Invalid assignee'}, status=400)
-        ticket.assignee = new_assignee
-    if 'title' in new_data:
-        actions.append(f"Title: {ticket.title} -> {request.POST['title']}")
-        ticket.title = request.POST['title']
-    if 'description' in new_data:
-        actions.append(f"Description: {ticket.description} -> {request.POST['description']}")
-        ticket.description = request.POST['description']
-    if 'status' in new_data:
-        actions.append(f"Status: {ticket.status} -> {request.POST['status']}")
-        ticket.status = Status.objects.filter(name=request.POST['status']).first()
-    if 'priority' in new_data:
-        actions.append(f"Priority: {ticket.priority} -> {request.POST['priority']}")
-        ticket.priority = Priority.objects.filter(name=request.POST['priority']).first()
-    if 'category' in new_data:
-        actions.append(f"Category: {ticket.category} -> {request.POST['category']}")
-        ticket.category = Category.objects.filter(name=request.POST['category']).first()
-    if 'due_date' in new_data:
-        actions.append(f"Due date: {ticket.due_date} -> {request.POST['due_date']}")
-        ticket.due_date = request.POST['due_date']
-    if actions:
-        ticket.comments.create(
-            author=request.user,
-            comment=";\n".join(actions)
-        )
-        log_activity(ticket, request.user, "Changes to ticket")
-    ticket.save()
-    if len(actions) == 0:
-        return JsonResponse({'error': 'No changes made'}, status=400)
-    return JsonResponse({'ticket_id': ticket.id, 'actions': actions, "success": True})
-
-@csrf_exempt
-@api_auth(required=True)
-def api_ticket_create(request):
-    try:
-        data = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON'}, status=400)
-    if not Priority.objects.filter(name=data.get('priority', "Low")).exists():
-        return JsonResponse({'error': 'Invalid priority value'}, status=400)
-    if not Status.objects.filter(name=data.get('status', "Open")).exists():
-        return JsonResponse({'error': 'Invalid status value'}, status=400)
-    if not Category.objects.filter(name=data.get('category',"Support")).exists():
-        return JsonResponse({'error': 'Invalid category value'}, status=400)
-    ticket = Ticket.objects.create(
-        issuer=request.user,
-        assigned_group=Group.objects.get(name=data.get('assigned_group', None)),
-        assignee=User.objects.get(username=data.get('assignee', request.user.username)),
-        title=data.get('title',"without title"),
-        description=data.get('description',"without description"),
-        status=Status.objects.filter(name=data.get('status',"Open")).first(),
-        priority=Priority.objects.filter(name=data.get('priority',"Low")).first(),
-        category=Category.objects.filter(name=data.get('category',"Support")).first(),
-        due_date=data.get('due_date', None)
-    )
-    return JsonResponse({'ticket_id': ticket.id})
-
-@api_auth(required=True)
-def api_list_tickets(request):
-    # Filter tickets based on request parameters
-    filter = {}
-    if 'status' in request.GET:
-        filter['status__in']= request.GET['status'].split(",")
-    if 'priority' in request.GET:
-        filter['priority__in'] = request.GET['priority'].split(",")
-    if 'from_date' in request.GET:
-        filter['created_at__gte'] = request.GET['from_date']
-    if 'to_date' in request.GET:
-        filter['created_at__lte'] = request.GET['to_date']
-    if 'due_date' in request.GET:
-        filter['due_date__in'] = request.GET['due_date'].split(",")
-    if 'assignee' in request.GET:
-        filter['assignee__username__in'] =  request.GET['assignee'].split(",")
-    if 'issuer' in request.GET:
-        filter['issuer__username__in'] = request.GET['issuer'].split(",")
-
-    tickets = Ticket.objects.filter(hidden=False) \
-        .exclude(status__closed=True) \
-        .order_by('-updated_at')
-    
-    if filter:
-        tickets = tickets.filter(**filter)
-
-    tickets_data = [
-        {
-            'id': ticket.id,
-            'issuer': ticket.issuer.username,
-            'title': ticket.title,
-            'status': ticket.status.name,
-            'priority': ticket.priority.name,
-            'category': ticket.category.name,
-            'assignee': ticket.assignee.username,
-            'created_at': ticket.created_at.isoformat(),
-            'updated_at': ticket.updated_at.isoformat(),
-            'due_date': ticket.due_date.isoformat() if ticket.due_date else None
-        }
-        for ticket in tickets
-    ]
-    # return JsonResponse({}, safe=False)  
-    return JsonResponse({'tickets': tickets_data}, json_dumps_params={"indent":2}, safe=False)
-
-# API for ticket details
-@api_auth(required=True)
-def api_ticket_detail(request, ticket_id):
-    try:
-        ticket = Ticket.objects.get(pk=ticket_id)
-    except Ticket.DoesNotExist:
-        return JsonResponse({'error': 'Ticket not found'}, status=404)
-    ticket_data = {
-        'id': ticket.id,
-        'title': ticket.title,
-        'description': ticket.description,
-        'status': ticket.status.name,
-        'priority': ticket.priority.name,
-        'category': ticket.category.name,
-        'assignee': ticket.assignee.username,
-        'created_at': ticket.created_at.isoformat(),
-        'updated_at': ticket.updated_at.isoformat(),
-        'comments': [
-            {
-                'id': comment.id,
-                'author': comment.author.username,
-                'comment': comment.comment,
-                'created_at': comment.created_at.isoformat(),
-                'upvotes': comment.upvotes,
-                'downvotes': comment.downvotes
-            }
-            for comment in ticket.comments.all()
-        ]
-    }
-    return JsonResponse(ticket_data)
-    
-    
-def statistics_view(request):
-    context = {
-        'avg_resolution_time': Statistics.average_ticket_resolution_time(),
-        'open_tickets_assignee_to_users': Statistics.open_tickets_assignee_to_users(),
-        'closed_tickets_assignee_to_users': Statistics.closed_tickets_assignee_to_users(),
-        'ticket_status_summary': Statistics.ticket_status_summary(),
-        'priority_summary': Statistics.priority_summary(),
-        'over_due': Statistics.overdue_task_count(),
-        'resolved_before': Statistics.not_overdue_task_count(),
-        'open_tickets_per_user_category': Statistics.open_tickets_per_user_category(),
-        'closed_tickets_per_user_category': Statistics.closed_tickets_per_user_category()
-    }
-    return render(request, 'tickets/statistics.html', context)
-
-def app_index(request):
-    return render(request, 'tickets/app_index.html')
+import json
+from rest_framework import generics, permissions, status, viewsets, serializers
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from .serializers import TicketSerializer, CommentSerializer, UserSerializer, GroupSerializer
 
 def log_activity(ticket, request_user, log):
-    actor = User.objects.get(pk=request_user.id)
+    actor = request_user if isinstance(request_user, User) else User.objects.get(pk=request_user.id)
     Changes.objects.create(
         ticket=ticket,
         actor=actor,
         log=log
     )
-    
-    
-@login_required
-def pull_request(request):
-    # get the requests args
-    # i.e. /api/tickets/pull?action=get_info&source=new_tickets_timestamp
-    action = request.GET.get('action')
-    source = request.GET.get('source')
-    if action == 'get_info':
-        if source == 'open_issues':
-            # get the timestamp of the last ticket created
-            open_bugs = Ticket.objects.all().filter(hidden=False).exclude(status__closed=True).order_by('-created_at').filter(category__name="Bug")
-            # return json response
-            open_bugs = filter_tickets(request, open_bugs)
-            return JsonResponse({
-                                 'tickets': [{"id":ticket.pk, "title": ticket.title, "status": "new" if ticket.status.name == "Open" else "known" } for ticket in open_bugs]
-                                 })  
+
+class TicketViewSet(viewsets.ModelViewSet):
+    serializer_class = TicketSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Ticket.objects.filter(hidden=False)
+
+        if not user.is_authenticated:
+            return Ticket.objects.none()
+        
+        if user.is_superuser or user.groups.filter(name='Admin').exists() or user.groups.filter(name='ReadOnly').exists():
+            pass
+        elif user.groups.filter(name='Untrusted').exists():
+            queryset = queryset.filter(assignee=user) | queryset.filter(issuer=user)
+        else:
+            user_groups = user.groups.all()
+            can_view_all = any(g.permissions.filter(codename='can_view_all_tickets').exists() for g in user_groups)
+
+            if not can_view_all:
+                group_tickets = Ticket.objects.none()
+                viewable_group_ids = [g.id for g in user_groups if g.permissions.filter(codename='can_view_group_tickets').exists()]
+                if viewable_group_ids:
+                    group_tickets = queryset.filter(assigned_group_id__in=viewable_group_ids)
+
+                queryset = queryset.filter(assignee=user) | queryset.filter(issuer=user) | group_tickets
+                queryset = queryset.distinct()
+
+        include_closed = self.request.query_params.get('include_closed', 'false').lower() == 'true'
+        if not include_closed:
+            queryset = queryset.exclude(status__closed=True)
+
+        status_param = self.request.query_params.get('status')
+        priority_param = self.request.query_params.get('priority')
+        assignee_param = self.request.query_params.get('assignee')
+        issuer_param = self.request.query_params.get('issuer')
+        group_param = self.request.query_params.get('assigned_group')
+
+        if status_param:
+            statuses = status_param.split(',')
+            queryset = queryset.filter(status__name__in=statuses)
+        if priority_param:
+            priorities = priority_param.split(',')
+            queryset = queryset.filter(priority__name__in=priorities)
+        if assignee_param:
+            queryset = queryset.filter(assignee__username=assignee_param)
+        if issuer_param:
+            queryset = queryset.filter(issuer__username=issuer_param)
+        if group_param:
+            queryset = queryset.filter(assigned_group__name=group_param)
+
+        return queryset.order_by('-updated_at')
+
+    def perform_create(self, serializer):
+        instance = serializer.save(issuer=self.request.user)
+        log_activity(instance, self.request.user, "Created ticket")
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        log_activity(instance, self.request.user, "Changes to ticket")
+
+    @action(detail=True, methods=['post'])
+    def add_comment(self, request, pk=None):
+        ticket = self.get_object()
+        comment_text = request.data.get('comment')
+        if not comment_text:
+            return Response({'error': 'Comment text is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        comment = Comment.objects.create(
+            ticket=ticket,
+            author=request.user,
+            comment=comment_text
+        )
+        log_activity(ticket, request.user, "Added comment to ticket")
+        serializer = CommentSerializer(comment)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+class CommentViewSet(viewsets.ModelViewSet):
+    serializer_class = CommentSerializer
+
+    def get_queryset(self):
+        queryset = Comment.objects.all()
+        ticket_id = self.request.query_params.get('ticket_id')
+        if ticket_id:
+            queryset = queryset.filter(ticket_id=ticket_id)
+        return queryset.order_by('-created_at')
+
+    def perform_create(self, serializer):
+        ticket_id = self.request.data.get('ticket')
+        if not ticket_id:
+            raise serializers.ValidationError("Ticket ID is required.")
+        try:
+            ticket = Ticket.objects.get(pk=ticket_id)
+            instance = serializer.save(author=self.request.user, ticket=ticket)
+            log_activity(ticket, self.request.user, "Added comment to ticket")
+        except Ticket.DoesNotExist:
+            raise serializers.ValidationError("Ticket not found.")
+
+def app_index(request):
+    return render(request, 'tickets/app_index.html')
 
 def privacy_view(request):
     return render(request, 'tickets/privacy.html') 
