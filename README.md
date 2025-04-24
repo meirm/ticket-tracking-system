@@ -1,91 +1,99 @@
-# Ticket Tracking System (TTS)
+# Cyborg Ticketing System - API Backend
 
-![Ticket Tracking System](screenshot.png)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-## Overview
-
-Welcome to the Ticket Tracking System (TTS), a simple yet effective web-based tool designed to help manage tickets, track progress, and log issues within an organization or project. Users can create, assign, update, and comment on tickets, with administrative controls for managing permissions and roles.
-
-This project is built using **Django** and **SQLAlchemy ORM**, emphasizing modularity, scalability, and ease of use.
+This is the API backend for a ticket tracking system built with Django and Django REST Framework.
 
 ## Features
 
-- **Create, Edit, and Delete Tickets**: Manage tickets with essential details like title, description, priority, status, and category.
-- **Commenting System**: Keep discussions organized with a comment section attached to each ticket.
-- **Upvote/Downvote**: Highlight priority and relevance by upvoting or downvoting tickets and comments.
-- **Role-based Access Control**: Administrators manage user roles and permissions for performing various ticket-related actions.
-- **Real-Time Status Updates**: Track the lifecycle of each ticket, from creation to completion.
+*   **API Endpoints:** Provides RESTful API endpoints for managing:
+    *   Tickets (CRUD, filtering)
+    *   Comments (CRUD, filtering)
+    *   API Keys (CRUD, activate/deactivate)
+    *   Users, Groups, Categories, Statuses, Priorities (via related fields)
+*   **Authentication:** Supports Token-based authentication (and Session for Browsable API).
+*   **Permissions:** Basic permission handling (extensible).
+*   **Filtering:** Allows filtering ticket lists via query parameters.
+*   **Admin Interface:** Standard Django admin for backend management.
 
 ## Setup and Installation
 
-1. **Clone the Repository**:
+### Prerequisites
 
-   ```bash
-   git clone https://github.com/ticket-tracking-system.git
-   cd ticket-tracking-system
-   ```	
+*   Python 3.x
+*   Pip
+*   Virtualenv (Recommended)
+*   PostgreSQL (Recommended for production) or another compatible database.
 
-2.	**Install Dependencies**:
+### Installation Steps
 
-	```
-	pip install -r requirements.txt
-	```
+1.  **Clone the repository:**
+    ```bash
+    git clone <repository-url>
+    cd ticket-tracking-system
+    ```
 
+2.  **Create and activate a virtual environment (recommended):**
+    ```bash
+    python -m venv venv
+    # On Windows
+    venv\Scripts\activate
+    # On macOS/Linux
+    source venv/bin/activate
+    ```
 
-3.	**Apply Migrations**:
+3.  **Install dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-	```
-	python manage.py migrate
-	```
+4.  **Configure Environment Variables:**
+    Create a `.env` file in the project root directory (where `manage.py` is located) and add your database credentials:
+    ```dotenv
+    DB_ENGINE=postgresql
+    DB_NAME=your_db_name
+    DB_USERNAME=your_db_user
+    DB_PASS=your_db_password
+    DB_HOST=your_db_host
+    DB_PORT=your_db_port
+    ```
+    *(If you are using SQLite for local development, you can skip this step, but PostgreSQL is recommended for production.)*
 
-4.	**Create a Superuser**:
+5.  **Apply database migrations:**
+    ```bash
+    python manage.py makemigrations
+    python manage.py migrate
+    ```
 
-	```
-	python manage.py createsuperuser
-	```
+6.  **Create a superuser (for admin access):**
+    ```bash
+    python manage.py createsuperuser
+    ```
+    Follow the prompts to create an admin account.
 
-5.	**Run the Development Server**:
+7.  **Run the development server:**
+    ```bash
+    python manage.py runserver
+    ```
+    The API backend should now be running at `http://127.0.0.1:8000/`.
 
-	```
-	python manage.py runserver
-	```
+## API Usage
 
-6.	**Login to the Admin Panel**:
+*   **Endpoints:** The main API endpoints are available under:
+    *   `/tickets/api/v1/` (Tickets and Comments)
+    *   `/accounts/api/v1/` (API Keys)
+*   **Authentication:** Include your API token in the `Authorization` header: `Authorization: Token YOUR_API_TOKEN`.
+*   **Browsable API:** Accessing the endpoints in a web browser while logged in via session authentication will show the DRF Browsable API for easier interaction during development.
+*   **Examples:** (Use tools like `curl` or Postman)
+    *   List Tickets: `GET /tickets/api/v1/tickets/`
+    *   Create Ticket: `POST /tickets/api/v1/tickets/` with JSON data.
+    *   Get API Keys: `GET /accounts/api/v1/keys/`
+*   **Admin Panel:** Access the Django admin interface at `http://127.0.0.1:8000/admin/`.
 
-Visit http://localhost:8000/admin and log in with your superuser account.
+## Contributing
 
-7.	**Create a Group**:
-
-Create a group in the admin panel and assign it permissions to create and edit tickets.
-
-8.	**Assign Users to the Group**:
-Assign the group to the users who should have ticket creation and editing permissions.
-
-## Access the Application
-
-Open your web browser and navigate to http://localhost:8000.
-
-## How to Use
-
-	1.	Creating a New Ticket:
-	•	Click on “New Ticket” in the navigation menu.
-	•	Fill in the required fields (title, description, priority, category, etc.) and assign the ticket to a user.
-	•	Submit the form to create the ticket.
-	2.	Viewing and Updating Tickets:
-	•	Go to the “List” page to view all tickets.
-	•	Click on a ticket to view its details, update the status, or add comments.
-	3.	Managing Comments:
-	•	Open a ticket and scroll to the comments section.
-	•	Add new comments or upvote/downvote existing comments.
-
-## Purpose and Goals
-
-The Ticket Tracking System was developed to demonstrate the use of Django and Django ORM for managing tickets and handling comments, permissions, and roles. It provides a formal method for users to request changes and track issues, promoting a structured workflow and reducing interruptions.
-
-This system draws inspiration from Unix System Administrator’s Edition, showcasing the importance of a structured process for managing requests and tasks.
+Contributions are welcome! Please follow standard fork-and-pull-request workflows. Ensure code style follows Black formatting.
 
 ## License
 
-This project is licensed under the MIT License. © 2024 RIUNX. All rights reserved.
-
-**Feel free to explore the code and contribute!**
+This project is licensed under the MIT License - see the LICENSE file for details.

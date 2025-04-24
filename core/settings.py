@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'reset_migrations',
     'rest_framework',
+    'rest_framework.authtoken',
     'graphene_django',
     'accounts',
     'tickets',
@@ -162,4 +163,15 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 GRAPHENE = {
     "SCHEMA": "core.schema.schema"
+}
+
+# DRF Settings
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication', # Keep for browsable API
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated', # Default to authenticated users
+    ]
 }
