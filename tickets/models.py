@@ -1,5 +1,6 @@
 from django.db import models
 from django.forms import ValidationError
+from django.conf import settings
 
 
 class Tenant(models.Model):
@@ -53,8 +54,6 @@ class Ticket(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     due_date = models.DateTimeField(null=True, blank=True)
-    upvotes = models.IntegerField(default=0)
-    downvotes = models.IntegerField(default=0)
     hidden = models.BooleanField(default=False)
     
     def __str__(self):
@@ -112,8 +111,6 @@ class Comment(models.Model):
     comment = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    upvotes = models.IntegerField(default=0)
-    downvotes = models.IntegerField(default=0)
     
     def __str__(self):
         return self.comment

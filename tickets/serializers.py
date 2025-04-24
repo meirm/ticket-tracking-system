@@ -1,77 +1,125 @@
 from rest_framework import serializers
+from django.contrib.auth import get_user_model
 from .models import Ticket, Comment, Category, Priority, Status
-from django.contrib.auth.models import User, Group
 
+User = get_user_model()
+
+# Serializer for the User model
+# Used to represent user data in API responses, excluding sensitive fields.
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'first_name', 'last_name', 'email'] # Add more fields if needed
+        # Fields to include in the serialized output.
+        # Excludes password and other sensitive fields for security.
+        fields = ['id', 'username', 'email', 'first_name', 'last_name']
 
-class GroupSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Group
-        fields = ['id', 'name']
 
+# Serializer for the Category model
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ['id', 'name']
+        # Include all fields from the Category model.
+        fields = '__all__'
 
+
+# Serializer for the Priority model
 class PrioritySerializer(serializers.ModelSerializer):
     class Meta:
         model = Priority
-        fields = ['id', 'name']
+        # Include all fields from the Priority model.
+        fields = '__all__'
 
+
+# Serializer for the Status model
 class StatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = Status
-        fields = ['id', 'name', 'closed']
+        # Include all fields from the Status model.
+        fields = '__all__'
 
+
+# Serializer for the Comment model
+# Includes nested UserSerializer for the author field.
 class CommentSerializer(serializers.ModelSerializer):
-    author = UserSerializer(read_only=True) # Display author details
-    ticket = serializers.PrimaryKeyRelatedField(queryset=Ticket.objects.all(), write_only=True) # For creating comments
+    # Use UserSerializer to represent the author's details.
+    author = UserSerializer(read_only=True)
 
     class Meta:
         model = Comment
-        fields = ['id', 'ticket', 'author', 'comment', 'created_at', 'updated_at', 'upvotes', 'downvotes']
-        read_only_fields = ['author', 'created_at', 'updated_at'] # Author set automatically
+        # Specify the fields to include in the serialized output.
+        # Removed 'upvotes' and 'downvotes'
+        fields = ['id', 'ticket', 'author', 'comment', 'created_at', 'updated_at']
+        # Mark 'ticket' and 'author' as read-only because they are set internally
+        # or based on the context (e.g., author set to the logged-in user).
+        read_only_fields = ['ticket', 'author', 'created_at', 'updated_at']
 
+    # Override create method to automatically set the author
+    # based on the currently authenticated user making the request.
+    def create(self, validated_data):
+        # Set the author to the user from the request context.
+        validated_data['author'] = self.context['request'].user
+        # Call the superclass create method to save the comment.
+        return super().create(validated_data)
+
+
+# Serializer for the Ticket model
+# Includes nested serializers for related fields like reporter, assignee, category, priority, status, and comments.
 class TicketSerializer(serializers.ModelSerializer):
-    # Make relationships readable, but accept IDs for writing
-    issuer = UserSerializer(read_only=True)
-    assignee = serializers.PrimaryKeyRelatedField(queryset=User.objects.filter(is_active=True), allow_null=True, required=False)
-    assigned_group = serializers.PrimaryKeyRelatedField(queryset=Group.objects.all(), allow_null=True, required=False)
-    priority = serializers.PrimaryKeyRelatedField(queryset=Priority.objects.all())
-    category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())
-    status = serializers.PrimaryKeyRelatedField(queryset=Status.objects.all())
-
-    # Add nested comments for detail view
+    # Use UserSerializer for reporter and assignee fields.
+    reporter = UserSerializer(read_only=True)
+    assignee = UserSerializer(read_only=True)
+    # Allow assignee ID for assigning tickets.
+    assignee_id = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(), source='assignee', write_only=True, allow_null=True
+    )
+    # Use respective serializers for category, priority, and status.
+    category = CategorySerializer(read_only=True)
+    category_id = serializers.PrimaryKeyRelatedField(
+        queryset=Category.objects.all(), source='category', write_only=True, allow_null=True
+    )
+    priority = PrioritySerializer(read_only=True)
+    priority_id = serializers.PrimaryKeyRelatedField(
+        queryset=Priority.objects.all(), source='priority', write_only=True, allow_null=True
+    )
+    status = StatusSerializer(read_only=True)
+    status_id = serializers.PrimaryKeyRelatedField(
+        queryset=Status.objects.all(), source='status', write_only=True, allow_null=True
+    )
+    # Include comments related to the ticket, using CommentSerializer.
+    # This is a read-only field; comments are managed via the CommentViewSet.
     comments = CommentSerializer(many=True, read_only=True)
-    # Use StringRelatedField for readable names in list views if preferred
-    assignee_username = serializers.StringRelatedField(source='assignee.username', read_only=True)
-    assigned_group_name = serializers.StringRelatedField(source='assigned_group.name', read_only=True)
-    priority_name = serializers.StringRelatedField(source='priority.name', read_only=True)
-    category_name = serializers.StringRelatedField(source='category.name', read_only=True)
-    status_name = serializers.StringRelatedField(source='status.name', read_only=True)
 
     class Meta:
         model = Ticket
+        # Specify the fields to include in the serialized output.
+        # Removed 'upvotes' and 'downvotes'.
         fields = [
-            'id', 'issuer', 'assignee', 'assigned_group', 'permissions',
-            'priority', 'category', 'status', 'title', 'description',
-            'created_at', 'updated_at', 'due_date', 'upvotes', 'downvotes',
-            'hidden', 'comments',
-            # Read-only fields for convenience
-            'assignee_username', 'assigned_group_name', 'priority_name',
-            'category_name', 'status_name',
+            'id',
+            'title',
+            'description',
+            'reporter',
+            'assignee',
+            'assignee_id',
+            'category',
+            'category_id',
+            'priority',
+            'priority_id',
+            'status',
+            'status_id',
+            'created_at',
+            'updated_at',
+            'due_date',
+            # Removed 'upvotes', 'downvotes'
+            'comments',
         ]
-        read_only_fields = ['issuer', 'created_at', 'updated_at', 'comments'] # Issuer set automatically
+        # Mark fields that should not be directly written via the API.
+        # reporter is set automatically, comments are managed separately.
+        read_only_fields = ['reporter', 'created_at', 'updated_at', 'comments']
 
-    # Add validation if needed, e.g., assignee must be in assigned_group
-    def validate(self, data):
-        assignee = data.get('assignee')
-        assigned_group = data.get('assigned_group')
-        if assignee and assigned_group:
-            if not assignee.groups.filter(id=assigned_group.id).exists():
-                raise serializers.ValidationError("Assignee must belong to the assigned group.")
-        return data 
+    # Override create method to automatically set the reporter
+    # based on the currently authenticated user making the request.
+    def create(self, validated_data):
+        # Set the reporter to the user from the request context.
+        validated_data['reporter'] = self.context['request'].user
+        # Call the superclass create method to save the ticket.
+        return super().create(validated_data)
