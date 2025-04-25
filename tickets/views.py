@@ -8,6 +8,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from .serializers import TicketSerializer, CommentSerializer, UserSerializer, CategorySerializer, PrioritySerializer, StatusSerializer
 from django.contrib.auth import get_user_model
+from rest_framework.filters import SearchFilter
 
 # Get the User model
 User = get_user_model()
@@ -23,6 +24,8 @@ def log_activity(ticket, request_user, log):
 class TicketViewSet(viewsets.ModelViewSet):
     serializer_class = TicketSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    filter_backends = [SearchFilter]
+    search_fields = ['title', 'description']
 
     def get_queryset(self):
         user = self.request.user

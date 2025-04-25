@@ -174,5 +174,8 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated', # Default to authenticated users
-    ]
+    ],
+    # Add default pagination settings
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': 25 # Default limit if 'limit' query param is not provided
 }
