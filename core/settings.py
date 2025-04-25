@@ -168,6 +168,7 @@ GRAPHENE = {
 # DRF Settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'accounts.authentication.ApiKeyAuthentication',
         'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.SessionAuthentication', # Keep for browsable API
     ],

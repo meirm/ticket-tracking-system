@@ -6,7 +6,7 @@ from django.conf import settings
 from rest_framework import generics, permissions, status, viewsets, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .serializers import TicketSerializer, CommentSerializer, UserSerializer, GroupSerializer
+from .serializers import TicketSerializer, CommentSerializer, UserSerializer
 
 def log_activity(ticket, request_user, log):
     actor = request_user if isinstance(request_user, User) else User.objects.get(pk=request_user.id)

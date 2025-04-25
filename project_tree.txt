@@ -14,6 +14,7 @@
 ├── .env.sample
 ├── .gitignore
 ├── Dockerfile
+├── Dockerfile_dev
 ├── LICENSE
 ├── Manual.pdf
 ├── README.md
@@ -23,7 +24,6 @@
 │   ├── __init__.py
 │   ├── admin.py
 │   ├── apps.py
-│   ├── auth.py
 │   ├── migrations
 │   │   ├── 0001_initial.py
 │   │   ├── 0002_apikey.py
@@ -54,14 +54,9 @@
 ├── manage.py
 ├── migration_psql.md
 ├── migration_psql.pdf
-├── pages
-│   ├── __init__.py
-│   ├── admin.py
-│   ├── apps.py
-│   ├── models.py
-│   ├── tests.py
-│   ├── urls.py
-│   └── views.py
+├── next_steps_01.md
+├── next_steps_02.md
+├── next_steps_03.md
 ├── pre-push
 ├── project_tree.txt
 ├── push_to_prod.sh
@@ -77,7 +72,6 @@
 │   ├── __init__.py
 │   ├── admin.py
 │   ├── apps.py
-│   ├── authorization.py
 │   ├── management
 │   │   └── commands
 │   │       ├── __init__.py
@@ -85,8 +79,6 @@
 │   │       ├── init_tickets.py
 │   │       └── tickup.py
 │   ├── migrations
-│   │   ├── 0001_initial.py
-│   │   ├── 0002_category_priority_status_ticket_assigned_group_and_more.py
 │   │   └── __init__.py
 │   ├── models.py
 │   ├── schema.py
@@ -96,4 +88,4 @@
 │   └── views.py
 └── wait-for-it.sh
 
-13 directories, 84 files
+12 directories, 77 files
