@@ -18,7 +18,24 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # running migrations
+RUN python manage.py makemigrations
 RUN python manage.py migrate
+
+# initialize the database
+RUN python manage.py init_permissions
+RUN python manage.py init_tickets
+
+# create a superuser
+RUN python manage.py createsuperuser --username admin --email admin@example.com --noinput
+
+# create a simple user
+RUN python manage.py createuser --username=user --email=user@example.com --password=user
+
+# create an api key for the superuser
+RUN python manage.py apikey --action=create --user=admin --application=default
+
+# create an api key for the simple user
+RUN python manage.py apikey --action=create --user=user --application=default
 
 # gunicorn
 #CMD ["gunicorn", "--config", "gunicorn-cfg.py", "core.wsgi"]

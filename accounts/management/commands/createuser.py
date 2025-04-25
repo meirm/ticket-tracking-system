@@ -7,13 +7,13 @@ class Command(BaseCommand):
     help = 'Create a new user'
 
     def add_arguments(self, parser):
-        parser.add_argument('--help', action='store_true', help='Show this help message and exit')
+        parser.add_argument('--usage', action='store_true', help='Show this help message and exit')
         parser.add_argument('--username', type=str, required=True, help='Username of the user')
         parser.add_argument('--email', type=str, required=True, help='Email of the user')
         parser.add_argument('--password', type=str, required=True, help='Password of the user')
 
     def handle(self, *args, **options):
-        if options['help']:
+        if options['usage']:
             self.stdout.write(self.style.SUCCESS('Usage: python manage.py createuser --username=<username> --email=<email> --password=<password>'))
             return
         username = options['username']

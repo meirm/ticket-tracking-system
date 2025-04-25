@@ -36,6 +36,8 @@ class Command(BaseCommand):
         action = options['action']  
         user = options['user']
         application = options['application']
+        if not application:
+            application = 'default'
         key = options['key']
 
         if action == 'create':
@@ -55,8 +57,6 @@ class Command(BaseCommand):
             
     def create_api_key(self, user, application):
         user = User.objects.get(username=user)
-        if not application:
-            application = 'default'
         api_key = ApiKey.objects.create(user=user, application=application)
         self.stdout.write(self.style.SUCCESS(f'API key created: {api_key.key}'))
 
