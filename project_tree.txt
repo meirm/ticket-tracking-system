@@ -24,6 +24,12 @@
 │   ├── __init__.py
 │   ├── admin.py
 │   ├── apps.py
+│   ├── authentication.py
+│   ├── management
+│   │   └── commands
+│   │       ├── __init__.py
+│   │       ├── apikey.py
+│   │       └── createuser.py
 │   ├── migrations
 │   │   ├── 0001_initial.py
 │   │   ├── 0002_apikey.py
@@ -36,7 +42,9 @@
 │   └── views.py
 ├── ai_docs
 │   ├── api_integration.md
+│   ├── authentication.md
 │   └── project_summary.md
+├── build_pod.sh
 ├── core
 │   ├── __init__.py
 │   ├── asgi.py
@@ -61,6 +69,7 @@
 ├── project_tree.txt
 ├── push_to_prod.sh
 ├── requirements.txt
+├── run_pod.sh
 ├── sample_api_request.sh
 ├── sample_script.py
 ├── screenshot.png
@@ -88,4 +97,4 @@
 │   └── views.py
 └── wait-for-it.sh
 
-12 directories, 77 files
+14 directories, 84 files
