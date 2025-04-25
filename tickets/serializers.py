@@ -63,10 +63,10 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 # Serializer for the Ticket model
-# Includes nested serializers for related fields like reporter, assignee, category, priority, status, and comments.
+# Includes nested serializers for related fields like issuer, assignee, category, priority, status, and comments.
 class TicketSerializer(serializers.ModelSerializer):
-    # Use UserSerializer for reporter and assignee fields.
-    reporter = UserSerializer(read_only=True)
+    # Use UserSerializer for issuer and assignee fields.
+    issuer = UserSerializer(read_only=True)
     assignee = UserSerializer(read_only=True)
     # Allow assignee ID for assigning tickets.
     assignee_id = serializers.PrimaryKeyRelatedField(
@@ -97,7 +97,7 @@ class TicketSerializer(serializers.ModelSerializer):
             'id',
             'title',
             'description',
-            'reporter',
+            'issuer',
             'assignee',
             'assignee_id',
             'category',
@@ -113,13 +113,13 @@ class TicketSerializer(serializers.ModelSerializer):
             'comments',
         ]
         # Mark fields that should not be directly written via the API.
-        # reporter is set automatically, comments are managed separately.
-        read_only_fields = ['reporter', 'created_at', 'updated_at', 'comments']
+        # issuer is set automatically, comments are managed separately.
+        read_only_fields = ['issuer', 'created_at', 'updated_at', 'comments']
 
-    # Override create method to automatically set the reporter
+    # Override create method to automatically set the issuer
     # based on the currently authenticated user making the request.
     def create(self, validated_data):
-        # Set the reporter field on the model (which is named 'issuer')
+        # Set the issuer field on the model (which is named 'issuer')
         # The validated_data dictionary should contain the correct model instances
         # for assignee, category, priority, status due to the PrimaryKeyRelatedField 'source' attribute.
         validated_data['issuer'] = self.context['request'].user
