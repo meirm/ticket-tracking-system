@@ -2,6 +2,6 @@
 .env
 __pycache__/
 *.pyc
-**/migrations/
+# **/migrations/
 postgres_data/
 db.sqlite3
