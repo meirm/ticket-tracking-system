@@ -47,18 +47,20 @@ NEW_TICKET_JSON=$($API_CLIENT_SCRIPT -k "$API_KEY" -x create \
   -P "$PRIORITY_ID" \
   -S "$STATUS_ID")
 
-# Check if jq is available and attempt to parse ID
-if command -v jq &> /dev/null && [[ "$NEW_TICKET_JSON" == {* ]]; then
-    NEW_TICKET_ID=$(echo "$NEW_TICKET_JSON" | jq -r '.id')
+# Check if jq is available and response looks like JSON containing an ID
+if command -v jq &> /dev/null && [[ "$NEW_TICKET_JSON" == \{* ]]; then
+    # Trim potential trailing characters like %
+    trimmed_json=$(echo "$NEW_TICKET_JSON" | sed 's/[^}]*$//') 
+    NEW_TICKET_ID=$(echo "$trimmed_json" | jq -r '.id')
     echo "Created Ticket Response:" >&2
-    echo "$NEW_TICKET_JSON"
+    echo "$NEW_TICKET_JSON" # Show original response
     if [[ -z "$NEW_TICKET_ID" || "$NEW_TICKET_ID" == "null" ]]; then
-      echo "Error: Could not extract ID from create response. Exiting." >&2
+      echo "Error: Could not extract ID from create response (trimmed JSON: '$trimmed_json'). Exiting." >&2
       exit 1
     fi
     echo "Extracted New Ticket ID: $NEW_TICKET_ID" >&2
 else
-    echo "jq not found or create failed. Cannot automatically extract ticket ID." >&2
+    echo "jq not found or create failed/response invalid (does not start with {). Cannot automatically extract ticket ID." >&2
     echo "Create Response:" >&2
     echo "$NEW_TICKET_JSON"
     echo "Please manually find the ticket ID and run subsequent steps." >&2

@@ -81,6 +81,23 @@ class TicketViewSet(viewsets.ModelViewSet):
         instance = serializer.save()
         log_activity(instance, self.request.user, "Changes to ticket")
 
+    # Override the default update method to allow partial updates via PUT
+    def update(self, request, *args, **kwargs):
+        # Set partial=True to allow partial updates for PUT requests
+        # This makes PUT behave like PATCH, as required by our frontend constraint
+        partial = True 
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        if getattr(instance, '_prefetched_objects_cache', None):
+            # If 'prefetch_related' has been applied to a queryset, we need to
+            # forcibly invalidate the prefetch cache on the instance.
+            instance._prefetched_objects_cache = {}
+
+        return Response(serializer.data)
+
     @action(detail=True, methods=['post'])
     def add_comment(self, request, pk=None):
         ticket = self.get_object()

@@ -112,8 +112,6 @@ function create_ticket() {
 
   # Informational message to stderr
   echo "Creating ticket with payload:" >&2
-  # Payload remains on stdout for potential piping/logging
-  echo "$PAYLOAD"
 
   # Send the data via curl to the webhook URL using JSON
   output=$(curl -s -w "\\n%{http_code}" -X POST \
@@ -235,12 +233,8 @@ function update_ticket() {
 
     # Informational message to stderr
     echo "Updating ticket ID $TICKET_ID with payload:" >&2
-    # Payload remains on stdout
-    echo "$PAYLOAD"
-    # Send PUT request (as per dev-env rule)
-    # Ensure trailing slash for detail view
-    # curl -X PUT -H "Authorization: ApiKey $API_KEY" -H "Content-Type: application/json" --data "$PAYLOAD" "$WEBHOOK_URL$TICKET_ID/"
     local target_url="$WEBHOOK_URL$TICKET_ID/"
+    # Send PUT request
     output=$(curl -s -w "\\n%{http_code}" -X PUT -H "Authorization: ApiKey $API_KEY" -H "Content-Type: application/json" --data "$PAYLOAD" "$target_url" 2>/dev/null)
     http_code=$(printf "%s" "$output" | tail -n 1)
     body=$(printf "%s" "$output" | sed '$d')
