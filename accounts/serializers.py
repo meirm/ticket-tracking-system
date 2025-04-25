@@ -14,7 +14,7 @@ class ApiKeySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ApiKey
-        fields = ['id', 'user', 'application', 'key', 'created_at', 'updated_at', 'active']
+        fields = ['id', 'user', 'application', 'key', 'created_at', 'updated_at', 'active', 'readonly']
         read_only_fields = ['user', 'key', 'created_at', 'updated_at'] # Key generated on save
 
     

@@ -35,10 +35,11 @@ class ApiKey(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     active = models.BooleanField(default=True)
+    readonly = models.BooleanField(default=False)
     class meta:
         verbose_name_plural = 'ApiKeys'
         unique_together = ('user', 'application')
-    
+
     def __str__(self):
         return self.key
     
