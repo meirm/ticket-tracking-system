@@ -119,7 +119,11 @@ class TicketSerializer(serializers.ModelSerializer):
     # Override create method to automatically set the reporter
     # based on the currently authenticated user making the request.
     def create(self, validated_data):
-        # Set the reporter to the user from the request context.
-        validated_data['reporter'] = self.context['request'].user
-        # Call the superclass create method to save the ticket.
+        # Set the reporter field on the model (which is named 'issuer')
+        # The validated_data dictionary should contain the correct model instances
+        # for assignee, category, priority, status due to the PrimaryKeyRelatedField 'source' attribute.
+        validated_data['issuer'] = self.context['request'].user
+
+        # Let DRF pass the validated data (including mapped relationships) to the create method
+        # This assumes validated_data now has keys like 'assignee', 'category', etc. with model instances
         return super().create(validated_data)

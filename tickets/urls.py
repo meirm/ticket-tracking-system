@@ -8,6 +8,11 @@ app_name = 'tickets'
 router = DefaultRouter()
 router.register(r'tickets', views.TicketViewSet, basename='ticket')
 router.register(r'comments', views.CommentViewSet, basename='comment')
+# Register the new viewsets
+router.register(r'categories', views.CategoryViewSet, basename='category')
+router.register(r'priorities', views.PriorityViewSet, basename='priority')
+router.register(r'statuses', views.StatusViewSet, basename='status')
+router.register(r'users', views.UserViewSet, basename='user') # Endpoint for users
 
 # The API URLs are now determined automatically by the router.
 urlpatterns = [

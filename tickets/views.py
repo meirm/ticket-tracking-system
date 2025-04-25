@@ -6,7 +6,11 @@ from django.conf import settings
 from rest_framework import generics, permissions, status, viewsets, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .serializers import TicketSerializer, CommentSerializer, UserSerializer
+from .serializers import TicketSerializer, CommentSerializer, UserSerializer, CategorySerializer, PrioritySerializer, StatusSerializer
+from django.contrib.auth import get_user_model
+
+# Get the User model
+User = get_user_model()
 
 def log_activity(ticket, request_user, log):
     actor = request_user if isinstance(request_user, User) else User.objects.get(pk=request_user.id)
@@ -114,3 +118,47 @@ class CommentViewSet(viewsets.ModelViewSet):
             log_activity(ticket, self.request.user, "Added comment to ticket")
         except Ticket.DoesNotExist:
             raise serializers.ValidationError("Ticket not found.")
+
+# ViewSet for Categories (Read-Only)
+# Provides list and retrieve actions for Category model.
+class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API endpoint that allows categories to be viewed.
+    """
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+
+# ViewSet for Priorities (Read-Only)
+# Provides list and retrieve actions for Priority model.
+class PriorityViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API endpoint that allows priorities to be viewed.
+    """
+    queryset = Priority.objects.all()
+    serializer_class = PrioritySerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+
+# ViewSet for Statuses (Read-Only)
+# Provides list and retrieve actions for Status model.
+class StatusViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API endpoint that allows statuses to be viewed.
+    """
+    queryset = Status.objects.all()
+    serializer_class = StatusSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+
+# ViewSet for Users (Read-Only)
+# Provides list and retrieve actions for User model.
+class UserViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API endpoint that allows users to be viewed.
+    Uses a simple UserSerializer.
+    """
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated] # Require authentication to view users
