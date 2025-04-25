@@ -5,11 +5,12 @@ from .utils import log_activity
 from .models import ApiKey
 from rest_framework.response import Response
 from rest_framework import status, viewsets
+from rest_framework.views import APIView # Import APIView
 from rest_framework.decorators import action # Keep action decorator
 from .serializers import ApiKeySerializer
 from rest_framework.permissions import IsAuthenticated
 
-class ProtectedView(viewsets.APIView):
+class ProtectedView(APIView): # Inherit from APIView directly
     """
     Sample protected endpoint for testing API keys.
     """

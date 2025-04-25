@@ -89,4 +89,4 @@ class Command(BaseCommand):
         user = User.objects.get(username=user)
         api_key = ApiKey.objects.get(user=user, application=application)
         # print a curl command to access the protected endpoint from the accounts app
-        self.stdout.write(self.style.SUCCESS(f'curl -X GET http://localhost:8000/api/v1/protected/ -H "Authorization: Bearer {api_key.key}"'))
+        self.stdout.write(self.style.SUCCESS(f'curl -X GET http://localhost:8000/accounts/api/v1/protected/ -H "Authorization: ApiKey {api_key.key}"'))
