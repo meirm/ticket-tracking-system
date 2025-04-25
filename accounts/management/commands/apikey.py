@@ -4,6 +4,7 @@
 This command is used to CRUD API key for a user.
 
 Usage:
+python manage.py apikey --action=example --user=username --application=my_app
 python manage.py apikey --action=create --user=username [--application=my_app] 
 python manage.py apikey --action=list 
 python manage.py apikey --action=delete  --user=username  --key=api_key_id
@@ -47,11 +48,15 @@ class Command(BaseCommand):
             self.activate_api_key(user, key)
         elif action == 'deactivate':
             self.deactivate_api_key(user, key)
+        elif action == 'example':
+            self.example_api_key(user, application)
         else:
             self.stderr.write(self.style.ERROR('Invalid action'))
             
     def create_api_key(self, user, application):
         user = User.objects.get(username=user)
+        if not application:
+            application = 'default'
         api_key = ApiKey.objects.create(user=user, application=application)
         self.stdout.write(self.style.SUCCESS(f'API key created: {api_key.key}'))
 
@@ -80,3 +85,8 @@ class Command(BaseCommand):
         api_key.save()
         self.stdout.write(self.style.SUCCESS(f'API key deactivated: {key}'))
 
+    def example_api_key(self, user, application):
+        user = User.objects.get(username=user)
+        api_key = ApiKey.objects.get(user=user, application=application)
+        # print a curl command to access the protected endpoint from the accounts app
+        self.stdout.write(self.style.SUCCESS(f'curl -X GET http://localhost:8000/api/v1/protected/ -H "Authorization: Bearer {api_key.key}"'))

@@ -7,6 +7,15 @@ from rest_framework.response import Response
 from rest_framework import status, viewsets
 from rest_framework.decorators import action # Keep action decorator
 from .serializers import ApiKeySerializer
+from rest_framework.permissions import IsAuthenticated
+
+class ProtectedView(viewsets.APIView):
+    """
+    Sample protected endpoint for testing API keys.
+    """
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        return Response({'message': 'This is a protected endpoint.'})
 
 class ApiKeyViewSet(viewsets.ViewSet): # Use ViewSet for custom actions
     """

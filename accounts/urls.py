@@ -11,5 +11,7 @@ router.register(r'keys', views.ApiKeyViewSet, basename='apikey')
 urlpatterns = [
     # The API URLs are now determined automatically by the router.
     path('', include(router.urls)),
+    # path for sample protected endpoint
+    path('protected/', views.ProtectedView.as_view(), name='protected'),
     # TODO: Add URLs for login/logout/registration if using dj-rest-auth or djoser
 ]
