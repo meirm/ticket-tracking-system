@@ -16,6 +16,9 @@ router.register(r'users', views.UserViewSet, basename='user') # Endpoint for use
 
 # The API URLs are now determined automatically by the router.
 urlpatterns = [
+    # Add the path for the UserProfileView
+    path('api/v1/profile/', views.UserProfileView.as_view(), name='user-profile'),
+    # Include the router URLs for other endpoints
     path('api/v1/', include(router.urls)),
     # Remove all old URLs (UI and previous API)
 ]

@@ -182,3 +182,23 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated] # Require authentication to view users
+
+
+# View for the current user's profile (Read/Update)
+class UserProfileView(generics.RetrieveUpdateAPIView):
+    """
+    API endpoint that allows the current authenticated user to view and update their profile.
+    Handles GET (retrieve) and PUT/PATCH (update) requests.
+    """
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        # Returns the currently authenticated user
+        return self.request.user
+
+    # Optional: Override update to customize behavior if needed, 
+    # for example, to prevent certain fields from being updated or add logging.
+    # def perform_update(self, serializer):
+    #     # Add custom logic here if necessary
+    #     super().perform_update(serializer)

@@ -12,6 +12,8 @@ class UserSerializer(serializers.ModelSerializer):
         # Fields to include in the serialized output.
         # Excludes password and other sensitive fields for security.
         fields = ['id', 'username', 'email', 'first_name', 'last_name']
+        # Make username read-only
+        read_only_fields = ['username']
 
 
 # Serializer for the Category model
