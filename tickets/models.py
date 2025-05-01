@@ -130,4 +130,6 @@ class Changes(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):
-        return self.change
+        # Return the log field, which contains the change description
+        # Fixes AttributeError: 'Changes' object has no attribute 'change'
+        return self.log
