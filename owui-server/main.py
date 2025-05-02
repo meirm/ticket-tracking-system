@@ -273,6 +273,37 @@ async def id_to_name(model: str, obj_id: int) -> str:
 
 # --- API Endpoints ---
 
+@tts_app.get("/tickets/search", summary="Search tickets by query and scope")
+async def search_tickets(
+    q: str = Query(..., description="Search query (title, description, or assignee username)"),
+    scope: str = Query(None, description="Optional scope: my, hidden, closed")
+):
+    """
+    Proxies search requests to the Django TTS API's search endpoint.
+    Accepts 'q' (required) and 'scope' (optional) as query parameters.
+    Returns a list of matching tickets as JSON.
+    """
+    if not q.strip():
+        raise HTTPException(status_code=400, detail="Missing search query (q)")
+    # Build target URL and params
+    target_url = f"{TTS_API_URL}search/"
+    params = {"q": q}
+    if scope:
+        params["scope"] = scope
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(target_url, headers=headers, params=params)
+            response.raise_for_status()
+            data = response.json()
+            tickets = data.get("tickets", [])
+            # Normalize ticket fields for frontend compatibility
+            return {"tickets": [normalize_ticket_fields(t) for t in tickets]}
+        except httpx.RequestError as exc:
+            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
+        except httpx.HTTPStatusError as exc:
+            detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
+            raise HTTPException(status_code=exc.response.status_code, detail=detail)
+
 @tts_app.post("/tickets", response_model=TicketResponse, status_code=201, summary="Create a new ticket")
 async def create_ticket(ticket_data: TicketCreateRequest):
     """
@@ -643,35 +674,4 @@ async def close_ticket(ticket_id: int = Path(..., description="The unique intege
                 raise HTTPException(status_code=404, detail=f"Ticket with ID '{ticket_id}' not found in TTS.")
             else:
                 detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
-                raise HTTPException(status_code=exc.response.status_code, detail=detail)
-
-@tts_app.get("/tickets/search", summary="Search tickets by query and scope")
-async def search_tickets(
-    q: str = Query(..., description="Search query (title, description, or assignee username)"),
-    scope: str = Query(None, description="Optional scope: my, hidden, closed")
-):
-    """
-    Proxies search requests to the Django TTS API's search endpoint.
-    Accepts 'q' (required) and 'scope' (optional) as query parameters.
-    Returns a list of matching tickets as JSON.
-    """
-    if not q.strip():
-        raise HTTPException(status_code=400, detail="Missing search query (q)")
-    # Build target URL and params
-    target_url = f"{TTS_API_URL}search/"
-    params = {"q": q}
-    if scope:
-        params["scope"] = scope
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(target_url, headers=headers, params=params)
-            response.raise_for_status()
-            data = response.json()
-            tickets = data.get("tickets", [])
-            # Normalize ticket fields for frontend compatibility
-            return {"tickets": [normalize_ticket_fields(t) for t in tickets]}
-        except httpx.RequestError as exc:
-            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
-        except httpx.HTTPStatusError as exc:
-            detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
-            raise HTTPException(status_code=exc.response.status_code, detail=detail) 
+                raise HTTPException(status_code=exc.response.status_code, detail=detail) 
