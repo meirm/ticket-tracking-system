@@ -565,9 +565,9 @@ async def _list_related_items(item_type: str, response_model: Any, limit: int = 
     if not TTS_API_URL:
          raise HTTPException(status_code=500, detail="TTS_API_URL environment variable not set.")
     
-    # Only append the action to TTS_API_URL for users
+    # Use the new /assignees/ endpoint for possible ticket assignees
     if item_type == "users":
-        target_url = f"{TTS_API_URL}load-users/"
+        target_url = f"{TTS_API_URL}assignees/"
     else:
         # Fallback to the old logic for other types
         base_api_path = TTS_API_URL if TTS_API_URL.endswith('/') else f"{TTS_API_URL}/"
