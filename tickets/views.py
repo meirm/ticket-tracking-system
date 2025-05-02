@@ -195,7 +195,7 @@ def api_list_tickets(request):
             'status': ticket.status.name,
             'priority': ticket.priority.name,
             'category': ticket.category.name,
-            'assignee': ticket.assignee.username,
+            'assignee': ticket.assignee.username if ticket.assignee else None,
             'created_at': ticket.created_at.isoformat(),
             'updated_at': ticket.updated_at.isoformat(),
             'due_date': ticket.due_date.isoformat() if ticket.due_date else None
