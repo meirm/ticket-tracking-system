@@ -884,3 +884,22 @@ def api_user_detail(request, user_id):
         'last_name': user.last_name,
     }
     return JsonResponse(data)
+
+@csrf_exempt
+@api_auth(required=True)
+def api_list_assignees(request):
+    """
+    Returns a JSON list of users who can be assigned tickets (active users).
+    """
+    users = User.objects.filter(is_active=True).order_by('username')
+    data = [
+        {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+        }
+        for user in users
+    ]
+    return JsonResponse({'results': data, 'count': len(data)})

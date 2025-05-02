@@ -46,4 +46,5 @@ urlpatterns = [
     path('api/v1/statuses/', views.api_list_statuses, name='api_list_statuses'),
     path('api/v1/profile/', views.api_profile, name='api_profile'),
     path('api/v1/users/<int:user_id>/', views.api_user_detail, name='api_user_detail'),
+    path('api/v1/assignees/', views.api_list_assignees, name='api_list_assignees'),
 ]
