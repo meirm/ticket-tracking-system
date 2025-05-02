@@ -726,3 +726,50 @@ def api_search_tickets(request):
         for ticket in ticket_list
     ]
     return JsonResponse({'tickets': tickets_data}, json_dumps_params={"indent":2}, safe=False)
+
+@csrf_exempt
+@api_auth(required=True)
+def api_batch_close_tickets(request):
+    """
+    API endpoint to batch close tickets.
+    Accepts POST with JSON: {"ticket_ids": [1,2,3]}
+    Returns a summary of closed and failed tickets.
+    """
+    if request.method != "POST":
+        return JsonResponse({'error': 'POST required'}, status=405)
+    try:
+        data = json.loads(request.body)
+        ticket_ids = data.get('ticket_ids', [])
+    except Exception:
+        return JsonResponse({'error': 'Invalid JSON or missing ticket_ids'}, status=400)
+    if not isinstance(ticket_ids, list) or not all(isinstance(i, int) for i in ticket_ids):
+        return JsonResponse({'error': 'ticket_ids must be a list of integers'}, status=400)
+
+    closed = []
+    failed = []
+    # Get the 'Closed' status object
+    closed_status = Status.objects.filter(name='Closed').first()
+    if not closed_status:
+        return JsonResponse({'error': 'No status named "Closed" found'}, status=500)
+
+    for tid in ticket_ids:
+        try:
+            ticket = Ticket.objects.get(pk=tid)
+            # Permission check: reuse filter_ticket logic
+            if not filter_ticket(request, ticket):
+                failed.append({'id': tid, 'reason': 'Permission denied'})
+                continue
+            if ticket.status == closed_status:
+                closed.append({'id': tid, 'already_closed': True})
+                continue
+            ticket.status = closed_status
+            ticket.save()
+            # Optionally, log the activity
+            log_activity(ticket, request.user, "Batch closed ticket")
+            closed.append({'id': tid, 'closed': True})
+        except Ticket.DoesNotExist:
+            failed.append({'id': tid, 'reason': 'Not found'})
+        except Exception as e:
+            failed.append({'id': tid, 'reason': str(e)})
+
+    return JsonResponse({'closed': closed, 'failed': failed})

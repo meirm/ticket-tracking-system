@@ -1,6 +1,6 @@
 # servers/ticket-tracking-system/main.py
 # Import necessary libraries
-from fastapi import FastAPI, HTTPException, Body, Path, Query
+from fastapi import FastAPI, HTTPException, Body, Path, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict, Any, TypeVar, Generic
@@ -674,4 +674,27 @@ async def close_ticket(ticket_id: int = Path(..., description="The unique intege
                 raise HTTPException(status_code=404, detail=f"Ticket with ID '{ticket_id}' not found in TTS.")
             else:
                 detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
-                raise HTTPException(status_code=exc.response.status_code, detail=detail) 
+                raise HTTPException(status_code=exc.response.status_code, detail=detail)
+
+@tts_app.post("/tickets/batch_close", summary="Batch close tickets by IDs")
+async def batch_close_tickets(request: Request):
+    """
+    Proxies batch close requests to the Django TTS API's batch close endpoint.
+    Accepts POST with JSON: {"ticket_ids": [1,2,3]}
+    Returns a summary of closed and failed tickets.
+    """
+    target_url = f"{TTS_API_URL}batch_close/"
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body.")
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(target_url, json=body, headers=headers)
+            response.raise_for_status()
+            return response.json()
+        except httpx.RequestError as exc:
+            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
+        except httpx.HTTPStatusError as exc:
+            detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
+            raise HTTPException(status_code=exc.response.status_code, detail=detail) 
