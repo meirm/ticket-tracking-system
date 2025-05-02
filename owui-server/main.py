@@ -674,4 +674,29 @@ async def close_ticket(ticket_id: int = Path(..., description="The unique intege
                 raise HTTPException(status_code=404, detail=f"Ticket with ID '{ticket_id}' not found in TTS.")
             else:
                 detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
-                raise HTTPException(status_code=exc.response.status_code, detail=detail) 
+                raise HTTPException(status_code=exc.response.status_code, detail=detail)
+
+# --- Batch Close Request Model ---
+class BatchCloseRequest(BaseModel):
+    """
+    Request model for batch closing tickets.
+    """
+    ticket_ids: List[int] = Field(..., description="List of ticket IDs to close.")
+
+@tts_app.post("/tickets/batch_close", summary="Batch close tickets by IDs")
+async def batch_close_tickets(request: BatchCloseRequest):
+    """
+    Closes multiple tickets by forwarding the list of IDs to the Django batch close API.
+    Returns a summary of closed and failed ticket IDs.
+    """
+    target_url = f"{TTS_API_URL}batch_close/"
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(target_url, json=request.dict(), headers=headers)
+            response.raise_for_status()
+            return response.json()
+        except httpx.RequestError as exc:
+            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
+        except httpx.HTTPStatusError as exc:
+            detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
+            raise HTTPException(status_code=exc.response.status_code, detail=detail) 
