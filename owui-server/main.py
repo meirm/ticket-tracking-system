@@ -680,17 +680,24 @@ async def close_ticket(ticket_id: int = Path(..., description="The unique intege
 async def batch_close_tickets(request: Request):
     """
     Proxies batch close requests to the Django TTS API's batch close endpoint.
-    Accepts POST with JSON: {"ticket_ids": [1,2,3]}
+    Accepts POST with JSON: {"ticket_ids": [1,2,3]} and sends as form-encoded.
     Returns a summary of closed and failed tickets.
     """
     target_url = f"{TTS_API_URL}batch_close/"
     try:
         body = await request.json()
+        ticket_ids = body.get("ticket_ids", [])
+        if not isinstance(ticket_ids, list) or not all(isinstance(i, int) for i in ticket_ids):
+            raise ValueError
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON body.")
+        raise HTTPException(status_code=400, detail="Invalid JSON body or missing ticket_ids (list of integers).")
+    # Convert to form-encoded: ticket_ids=1,2,3
+    form_data = {"ticket_ids": ",".join(str(i) for i in ticket_ids)}
+    form_headers = headers.copy()
+    form_headers["Content-Type"] = "application/x-www-form-urlencoded"
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.post(target_url, json=body, headers=headers)
+            response = await client.post(target_url, data=form_data, headers=form_headers)
             response.raise_for_status()
             return response.json()
         except httpx.RequestError as exc:

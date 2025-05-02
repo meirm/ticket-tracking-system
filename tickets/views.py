@@ -732,18 +732,32 @@ def api_search_tickets(request):
 def api_batch_close_tickets(request):
     """
     API endpoint to batch close tickets.
-    Accepts POST with JSON: {"ticket_ids": [1,2,3]}
+    Accepts POST with either:
+      - form-encoded: ticket_ids=1,2,3
+      - JSON: {"ticket_ids": [1,2,3]}
     Returns a summary of closed and failed tickets.
     """
     if request.method != "POST":
         return JsonResponse({'error': 'POST required'}, status=405)
-    try:
-        data = json.loads(request.body)
-        ticket_ids = data.get('ticket_ids', [])
-    except Exception:
-        return JsonResponse({'error': 'Invalid JSON or missing ticket_ids'}, status=400)
-    if not isinstance(ticket_ids, list) or not all(isinstance(i, int) for i in ticket_ids):
-        return JsonResponse({'error': 'ticket_ids must be a list of integers'}, status=400)
+
+    ticket_ids = []
+    # Try to get ticket_ids from form data
+    if request.content_type.startswith('application/x-www-form-urlencoded') or request.content_type.startswith('multipart/form-data'):
+        ids_str = request.POST.get('ticket_ids', '')
+        if ids_str:
+            try:
+                ticket_ids = [int(i) for i in ids_str.split(',') if i.strip()]
+            except Exception:
+                return JsonResponse({'error': 'ticket_ids must be a comma-separated list of integers'}, status=400)
+    # Fallback to JSON body
+    if not ticket_ids:
+        try:
+            data = json.loads(request.body)
+            ticket_ids = data.get('ticket_ids', [])
+        except Exception:
+            return JsonResponse({'error': 'Invalid JSON or missing ticket_ids'}, status=400)
+        if not isinstance(ticket_ids, list) or not all(isinstance(i, int) for i in ticket_ids):
+            return JsonResponse({'error': 'ticket_ids must be a list of integers'}, status=400)
 
     closed = []
     failed = []
