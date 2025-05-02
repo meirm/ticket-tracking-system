@@ -161,12 +161,17 @@ def api_ticket_create(request):
     )
     return JsonResponse({'ticket_id': ticket.id})
 
-@api_auth(required=True)
-def api_list_tickets(request):
-    # Filter tickets based on request parameters
+# Helper function to build ticket filters from request GET parameters
+# This is used to keep filtering logic DRY and consistent between APIs
+
+def get_ticket_filters(request):
+    """
+    Helper to extract ticket filtering parameters from request.GET.
+    Returns a dict suitable for Django ORM filtering.
+    """
     filter = {}
     if 'status' in request.GET:
-        filter['status__in']= request.GET['status'].split(",")
+        filter['status__in'] = request.GET['status'].split(",")
     if 'priority' in request.GET:
         filter['priority__in'] = request.GET['priority'].split(",")
     if 'from_date' in request.GET:
@@ -176,17 +181,20 @@ def api_list_tickets(request):
     if 'due_date' in request.GET:
         filter['due_date__in'] = request.GET['due_date'].split(",")
     if 'assignee' in request.GET:
-        filter['assignee__username__in'] =  request.GET['assignee'].split(",")
+        filter['assignee__username__in'] = request.GET['assignee'].split(",")
     if 'issuer' in request.GET:
         filter['issuer__username__in'] = request.GET['issuer'].split(",")
+    return filter
 
+@api_auth(required=True)
+def api_list_tickets(request):
+    # Filter tickets based on request parameters
+    filter = get_ticket_filters(request)  # Use helper for filtering
     tickets = Ticket.objects.filter(hidden=False) \
         .exclude(status__closed=True) \
         .order_by('-updated_at')
-    
     if filter:
         tickets = tickets.filter(**filter)
-
     tickets_data = [
         {
             'id': ticket.id,
@@ -679,6 +687,7 @@ def api_search_tickets(request):
     Accepts:
       - q: search query (required)
       - scope: optional, one of 'my', 'hidden', 'closed' to filter results
+      - (plus all filters supported by api_list_tickets)
     Returns:
       - JSON list of matching tickets
     """
@@ -705,6 +714,11 @@ def api_search_tickets(request):
         tickets = tickets.filter(status__closed=True)
     else:
         tickets = tickets.exclude(status__closed=True)
+
+    # Apply advanced filters (same as api_list_tickets)
+    filter = get_ticket_filters(request)
+    if filter:
+        tickets = tickets.filter(**filter)
 
     # Apply permission filtering
     tickets = filter_tickets(request, tickets)
