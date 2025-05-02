@@ -245,6 +245,7 @@ def api_ticket_detail(request, ticket_id):
         'assignee': ticket.assignee.username,
         'created_at': ticket.created_at.isoformat(),
         'updated_at': ticket.updated_at.isoformat(),
+        'due_date': ticket.due_date.isoformat() if ticket.due_date else None,
         'comments': [
             {
                 'id': comment.id,

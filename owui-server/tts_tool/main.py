@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict, Any, TypeVar, Generic
 import os
+import json
 import httpx  # Using httpx for async HTTP requests, recommended with FastAPI
 
 # --- Configuration ---
@@ -184,7 +185,8 @@ class CommentResponse(BaseModel):
 # --- ADD: Generic Model for Paginated Lists ---
 ListItemType = TypeVar('ListItemType')
 
-class PaginatedListResponse(Generic[ListItemType], BaseModel):
+# FIX: Inherit from BaseModel before Generic[ListItemType]
+class PaginatedListResponse(BaseModel, Generic[ListItemType]):
     """Generic response model for any paginated list result."""
     count: int = Field(..., description="Total number of items available.")
     next: Optional[str] = Field(None, description="URL for the next page of results, if any.")
@@ -435,6 +437,7 @@ async def get_ticket(ticket_id: int = Path(..., description="The unique integer 
             response = await client.get(target_url, headers=headers)
             response.raise_for_status()
             ticket_data = response.json()
+            print(f"[DEBUG] Retrieved ticket data for ticket_id={ticket_id}: {json.dumps(ticket_data, indent=4)}")
             return normalize_ticket_fields(ticket_data)
         except httpx.RequestError as exc:
             raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
