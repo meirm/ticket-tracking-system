@@ -273,14 +273,31 @@ async def id_to_name(model: str, obj_id: int) -> str:
 
 # --- API Endpoints ---
 
-@tts_app.get("/tickets/search", summary="Search tickets by query and scope")
+@tts_app.get("/tickets/search", summary="Search tickets by query, scope, and filters")
 async def search_tickets(
     q: str = Query(..., description="Search query (title, description, or assignee username)"),
-    scope: str = Query(None, description="Optional scope: my, hidden, closed")
+    scope: str = Query(None, description="Optional scope: my, hidden, closed"),
+    status: str = Query(None, description="Comma-separated list of statuses to filter by (e.g. 'Open,In Progress')"),
+    priority: str = Query(None, description="Comma-separated list of priorities to filter by (e.g. 'High,Medium')"),
+    from_date: str = Query(None, description="Filter tickets created on or after this date (YYYY-MM-DD)"),
+    to_date: str = Query(None, description="Filter tickets created on or before this date (YYYY-MM-DD)"),
+    due_date: str = Query(None, description="Comma-separated list of due dates to filter by (YYYY-MM-DD)"),
+    assignee: str = Query(None, description="Comma-separated list of assignee usernames to filter by"),
+    issuer: str = Query(None, description="Comma-separated list of issuer usernames to filter by")
 ):
     """
     Proxies search requests to the Django TTS API's search endpoint.
-    Accepts 'q' (required) and 'scope' (optional) as query parameters.
+    Accepts:
+      - q (required): search query (title, description, or assignee username)
+      - scope (optional): one of 'my', 'hidden', 'closed' to filter results
+      - status (optional): comma-separated list of statuses
+      - priority (optional): comma-separated list of priorities
+      - from_date (optional): filter by created_at >= from_date
+      - to_date (optional): filter by created_at <= to_date
+      - due_date (optional): comma-separated list of due dates
+      - assignee (optional): comma-separated list of assignee usernames
+      - issuer (optional): comma-separated list of issuer usernames
+    All filter parameters are passed to the backend and combined with the search query.
     Returns a list of matching tickets as JSON.
     """
     if not q.strip():
@@ -290,6 +307,21 @@ async def search_tickets(
     params = {"q": q}
     if scope:
         params["scope"] = scope
+    # Add filters if present
+    if status:
+        params["status"] = status
+    if priority:
+        params["priority"] = priority
+    if from_date:
+        params["from_date"] = from_date
+    if to_date:
+        params["to_date"] = to_date
+    if due_date:
+        params["due_date"] = due_date
+    if assignee:
+        params["assignee"] = assignee
+    if issuer:
+        params["issuer"] = issuer
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(target_url, headers=headers, params=params)
@@ -338,14 +370,47 @@ async def create_ticket(ticket_data: TicketCreateRequest):
             raise HTTPException(status_code=exc.response.status_code, detail=detail)
 
 @tts_app.get("/tickets")
-async def list_tickets():
+async def list_tickets(
+    status: str = Query(None, description="Comma-separated list of statuses to filter by (e.g. 'Open,In Progress')"),
+    priority: str = Query(None, description="Comma-separated list of priorities to filter by (e.g. 'High,Medium')"),
+    from_date: str = Query(None, description="Filter tickets created on or after this date (YYYY-MM-DD)"),
+    to_date: str = Query(None, description="Filter tickets created on or before this date (YYYY-MM-DD)"),
+    due_date: str = Query(None, description="Comma-separated list of due dates to filter by (YYYY-MM-DD)"),
+    assignee: str = Query(None, description="Comma-separated list of assignee usernames to filter by"),
+    issuer: str = Query(None, description="Comma-separated list of issuer usernames to filter by")
+):
     """
     Retrieves a list of tickets from /tickets/api/v1/list/ and maps to expected output.
+    Accepts optional filter parameters:
+      - status: comma-separated list of statuses
+      - priority: comma-separated list of priorities
+      - from_date: filter by created_at >= from_date
+      - to_date: filter by created_at <= to_date
+      - due_date: comma-separated list of due dates
+      - assignee: comma-separated list of assignee usernames
+      - issuer: comma-separated list of issuer usernames
+    All filter parameters are passed to the backend and combined with the ticket listing.
+    Returns a list of tickets as JSON.
     """
     target_url = f"{TTS_API_URL}list/"
+    params = {}
+    if status:
+        params["status"] = status
+    if priority:
+        params["priority"] = priority
+    if from_date:
+        params["from_date"] = from_date
+    if to_date:
+        params["to_date"] = to_date
+    if due_date:
+        params["due_date"] = due_date
+    if assignee:
+        params["assignee"] = assignee
+    if issuer:
+        params["issuer"] = issuer
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.get(target_url, headers=headers)
+            response = await client.get(target_url, headers=headers, params=params)
             response.raise_for_status()
             data = response.json()
             # Django returns {'tickets': [...]}
