@@ -751,58 +751,6 @@ async def close_ticket(ticket_id: int = Path(..., description="The unique intege
                 detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
                 raise HTTPException(status_code=exc.response.status_code, detail=detail)
 
-@tts_app.post("/tickets/batch_close", summary="Batch close tickets by IDs")
-async def batch_close_tickets(request: Request):
-    """
-    Proxies batch close requests to the Django TTS API's batch close endpoint.
-    Accepts POST with JSON: {"ticket_ids": [1,2,3]} from the client.
-    Always sends JSON to Django.
-    Returns a summary of closed and failed tickets.
-    """
-    target_url = f"{TTS_API_URL}batch_close/"
-    # Print headers and raw body for debugging
-    headers = dict(request.headers)
-    raw_body = await request.body()
-    print(f"[DEBUG] Request headers: {headers}")
-    print(f"[DEBUG] Raw request body: {raw_body}")
-    # Only accept JSON
-    if not raw_body or raw_body.strip() == b'' or raw_body.strip() == b'{}':
-        print("[DEBUG] Error: Request body is empty. Client did not send any data.")
-        raise HTTPException(status_code=400, detail="Request body is empty. Please send JSON (e.g. {'ticket_ids': [1,2,3]}). Content-Type must be application/json.")
-    if request.headers.get("content-type", "").split(";")[0].lower() != "application/json":
-        print("[DEBUG] Error: Content-Type is not application/json.")
-        raise HTTPException(status_code=415, detail="Content-Type must be application/json.")
-    try:
-        body = await request.json()
-        print("[DEBUG] Received JSON body:", body)
-        ticket_ids = body.get("ticket_ids", [])
-        if not isinstance(ticket_ids, list) or not all(isinstance(i, int) for i in ticket_ids):
-            print("[DEBUG] Error: ticket_ids is not a list of integers.")
-            raise HTTPException(status_code=400, detail="ticket_ids must be a list of integers in JSON body.")
-    except Exception as e:
-        print(f"[DEBUG] Error parsing JSON body: {e}")
-        raise HTTPException(status_code=400, detail="Invalid JSON body. Please send JSON with ticket_ids as a list of integers.")
-    if not ticket_ids:
-        print("[DEBUG] Error: No ticket_ids provided after parsing body.")
-        raise HTTPException(status_code=400, detail="No ticket_ids provided. Please include ticket_ids as a list in JSON.")
-    print(f"[DEBUG] Input type received from client: json")
-    outgoing_json = {"ticket_ids": ticket_ids}
-    print("[DEBUG] Sending JSON to Django:", outgoing_json)
-    json_headers = headers.copy()
-    json_headers["Content-Type"] = "application/json"
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(target_url, json=outgoing_json, headers=json_headers)
-            response.raise_for_status()
-            return response.json()
-        except httpx.RequestError as exc:
-            print(f"[DEBUG] RequestError: {exc}")
-            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
-        except httpx.HTTPStatusError as exc:
-            print(f"[DEBUG] HTTPStatusError: {exc.response.status_code} - {exc.response.text}")
-            detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
-            raise HTTPException(status_code=exc.response.status_code, detail=detail)
-
 # --- Batch Close Request Model ---
 class BatchCloseRequest(BaseModel):
     """
