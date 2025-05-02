@@ -40,4 +40,10 @@ urlpatterns = [
     path('api/v1/load-users/', views.load_users, name='ajax_load_users'),
     # Batch close tickets API
     path('api/v1/batch_close/', views.api_batch_close_tickets, name='api_batch_close_tickets'),
+    # --- Added API endpoints for FastAPI proxy compatibility ---
+    path('api/v1/categories/', views.api_list_categories, name='api_list_categories'),
+    path('api/v1/priorities/', views.api_list_priorities, name='api_list_priorities'),
+    path('api/v1/statuses/', views.api_list_statuses, name='api_list_statuses'),
+    path('api/v1/profile/', views.api_profile, name='api_profile'),
+    path('api/v1/users/<int:user_id>/', views.api_user_detail, name='api_user_detail'),
 ]

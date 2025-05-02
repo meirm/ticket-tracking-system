@@ -14,6 +14,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from tickets.authorization import can_view_group_tickets
 from accounts.auth import api_auth
 import json 
+from django.contrib.auth import get_user_model
 
 def filter_tickets(request, ticket_list):
     if request.user.groups.filter(name='Untrusted').exists():
@@ -797,3 +798,74 @@ def api_batch_close_tickets(request):
         log_activity(ticket, request.user, "Batch closed ticket")
         results['closed'].append(tid)
     return JsonResponse(results, json_dumps_params={"indent":2})
+
+# --- API: List Categories ---
+@csrf_exempt
+@api_auth(required=True)
+def api_list_categories(request):
+    """
+    Returns a JSON list of all categories with id and name.
+    """
+    categories = Category.objects.all().order_by('name')
+    data = [{'id': c.id, 'name': c.name} for c in categories]
+    return JsonResponse({'results': data, 'count': len(data)})
+
+# --- API: List Priorities ---
+@csrf_exempt
+@api_auth(required=True)
+def api_list_priorities(request):
+    """
+    Returns a JSON list of all priorities with id and name.
+    """
+    priorities = Priority.objects.all().order_by('name')
+    data = [{'id': p.id, 'name': p.name} for p in priorities]
+    return JsonResponse({'results': data, 'count': len(data)})
+
+# --- API: List Statuses ---
+@csrf_exempt
+@api_auth(required=True)
+def api_list_statuses(request):
+    """
+    Returns a JSON list of all statuses with id and name.
+    """
+    statuses = Status.objects.all().order_by('name')
+    data = [{'id': s.id, 'name': s.name, 'closed': s.closed} for s in statuses]
+    return JsonResponse({'results': data, 'count': len(data)})
+
+# --- API: Get Current User Profile ---
+@csrf_exempt
+@api_auth(required=True)
+def api_profile(request):
+    """
+    Returns the current user's profile info as JSON.
+    """
+    user = request.user
+    data = {
+        'id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+    }
+    return JsonResponse(data)
+
+# --- API: Get User by ID ---
+@csrf_exempt
+@api_auth(required=True)
+def api_user_detail(request, user_id):
+    """
+    Returns a user's profile info by user ID as JSON.
+    """
+    User = get_user_model()
+    try:
+        user = User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        return JsonResponse({'error': 'User not found'}, status=404)
+    data = {
+        'id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+    }
+    return JsonResponse(data)
