@@ -119,6 +119,7 @@ class TicketUpdateRequest(BaseModel):
     status_id: Optional[int] = Field(None, description="Updated ID of the status.")
     assignee_id: Optional[int] = Field(None, description="Updated ID of the assignee.")
     category_id: Optional[int] = Field(None, description="Updated ID of the ticket category.")
+    due_date: Optional[str] = Field(None, description="Updated due date for the ticket.")
     # Add other updatable fields
 
 class TicketResponse(TicketBase):
@@ -265,7 +266,7 @@ async def id_to_name(model: str, obj_id: int) -> str:
     async with httpx.AsyncClient() as client:
         resp = await client.get(url, headers=headers)
         resp.raise_for_status()
-        items = resp.json().get(model, [])
+        items = resp.json().get("results", [])
         for item in items:
             if item.get("id") == obj_id:
                 return item.get("name")
@@ -449,11 +450,10 @@ async def update_ticket(
     ticket_data: TicketUpdateRequest,
     ticket_id: int = Path(..., description="The unique integer ID of the ticket to update.")
 ):
-    """
-    Updates specified fields of an existing ticket in /tickets/api/v1/edit/{ticket_id}/.
-    Uses ID fields for relations, maps to Django API fields.
-    Sends data as application/x-www-form-urlencoded to match backend expectations.
-    """
+    # DEBUG: Print incoming request data
+    print(f"[DEBUG] Incoming update_ticket request for ticket_id={ticket_id}")
+    print(f"[DEBUG] ticket_data: {ticket_data}")
+
     payload = {}
     if ticket_data.title is not None:
         payload["title"] = ticket_data.title
@@ -467,24 +467,34 @@ async def update_ticket(
         payload["priority"] = await id_to_name("priorities", ticket_data.priority_id)
     if ticket_data.status_id is not None:
         payload["status"] = await id_to_name("statuses", ticket_data.status_id)
+    # Forward due_date if present
+    if ticket_data.due_date is not None:
+        payload["due_date"] = ticket_data.due_date
     if not payload:
+        print("[DEBUG] No update data provided.")
         raise HTTPException(status_code=400, detail="No update data provided.")
+
+    print(f"[DEBUG] Payload to Django: {payload}")
+
     target_url = f"{TTS_API_URL}edit/{ticket_id}/"
-    # Use form data and set correct Content-Type
     form_headers = headers.copy()
     form_headers["Content-Type"] = "application/x-www-form-urlencoded"
     async with httpx.AsyncClient() as client:
         try:
             response = await client.post(target_url, data=payload, headers=form_headers)
+            print(f"[DEBUG] Django response status: {response.status_code}")
+            print(f"[DEBUG] Django response body: {response.text}")
             response.raise_for_status()
             result = response.json()
-            # Django returns ticket_id; fetch full details
             if not result.get("ticket_id"):
+                print("[DEBUG] No ticket_id returned from Django API.")
                 raise HTTPException(status_code=500, detail="No ticket_id returned from Django API.")
             return await get_ticket(ticket_id)
         except httpx.RequestError as exc:
+            print(f"[DEBUG] RequestError: {exc}")
             raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
         except httpx.HTTPStatusError as exc:
+            print(f"[DEBUG] HTTPStatusError: {exc.response.status_code} - {exc.response.text}")
             if exc.response.status_code == 404:
                 raise HTTPException(status_code=404, detail=f"Ticket with ID '{ticket_id}' not found in TTS.")
             else:

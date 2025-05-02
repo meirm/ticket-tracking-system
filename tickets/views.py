@@ -15,6 +15,7 @@ from tickets.authorization import can_view_group_tickets
 from accounts.auth import api_auth
 import json 
 from django.contrib.auth import get_user_model
+import datetime
 
 def filter_tickets(request, ticket_list):
     if request.user.groups.filter(name='Untrusted').exists():
@@ -123,8 +124,21 @@ def api_ticket_edit(request, ticket_id):
         actions.append(f"Category: {ticket.category} -> {request.POST['category']}")
         ticket.category = Category.objects.filter(name=request.POST['category']).first()
     if 'due_date' in new_data:
-        actions.append(f"Due date: {ticket.due_date} -> {request.POST['due_date']}")
-        ticket.due_date = request.POST['due_date']
+        due_date_str = request.POST['due_date']
+        if due_date_str:
+            try:
+                # Accept both date and datetime ISO formats
+                if 'T' in due_date_str:
+                    due_date = datetime.datetime.fromisoformat(due_date_str)
+                else:
+                    due_date = datetime.datetime.strptime(due_date_str, "%Y-%m-%d")
+            except ValueError:
+                return JsonResponse({'error': 'Invalid due_date format. Use YYYY-MM-DD or ISO format.'}, status=400)
+            actions.append(f"Due date: {ticket.due_date} -> {due_date}")
+            ticket.due_date = due_date
+        else:
+            actions.append(f"Due date: {ticket.due_date} -> None")
+            ticket.due_date = None
     if actions:
         ticket.comments.create(
             author=request.user,
