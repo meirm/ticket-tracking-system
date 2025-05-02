@@ -508,6 +508,12 @@ def edit_ticket(request, ticket_id):
         messages.error(request, 'You do not have permission to edit this ticket')
         return redirect('tickets:index')
     if request.method == 'POST':
+        # Validate required fields are not empty
+        required_fields = ['assignee', 'assigned_group', 'priority', 'category', 'status']
+        missing_fields = [field for field in required_fields if not request.POST.get(field)]
+        if missing_fields:
+            messages.error(request, f"Missing required fields: {', '.join(missing_fields)}")
+            return render(request, 'tickets/edit_ticket.html', {'ticket': ticket, 'edit_form': TicketForm(request.POST, instance=ticket)})
         # We want to create a new comment entry with the details of the changes made to the ticket.
         changes = []
         if User.objects.get(pk=request.POST['assignee']).id != ticket.assignee.id:
