@@ -732,50 +732,48 @@ def api_search_tickets(request):
 def api_batch_close_tickets(request):
     """
     API endpoint to batch close tickets.
-    Accepts POST with JSON: {"ticket_ids": [1,2,3]}
+    Accepts POST with JSON: {"ticket_ids": [1,2,3,...]}
     Returns a summary of closed and failed tickets.
     """
     if request.method != "POST":
         return JsonResponse({'error': 'POST required'}, status=405)
-
-    # Only accept JSON
-    if not request.content_type.startswith('application/json'):
-        return JsonResponse({'error': 'Content-Type must be application/json'}, status=415)
     try:
         data = json.loads(request.body)
+        ticket_ids = data.get('ticket_ids', [])
     except Exception:
-        return JsonResponse({'error': 'Invalid JSON body. Please send JSON with ticket_ids as a list of integers.'}, status=400)
-    ticket_ids = data.get('ticket_ids', [])
-    if not isinstance(ticket_ids, list) or not all(isinstance(i, int) for i in ticket_ids):
-        return JsonResponse({'error': 'ticket_ids must be a list of integers in JSON body.'}, status=400)
-    if not ticket_ids:
-        return JsonResponse({'error': 'No ticket_ids provided. Please include ticket_ids as a list in JSON.'}, status=400)
+        return JsonResponse({'error': 'Invalid JSON or missing ticket_ids'}, status=400)
+    if not isinstance(ticket_ids, list) or not ticket_ids:
+        return JsonResponse({'error': 'ticket_ids must be a non-empty list'}, status=400)
 
-    closed = []
-    failed = []
-    # Get the 'Closed' status object
-    closed_status = Status.objects.filter(name='Closed').first()
+    # Get the closed status object (assume name is 'Closed')
+    closed_status = Status.objects.filter(name__iexact='Closed').first()
     if not closed_status:
-        return JsonResponse({'error': 'No status named "Closed" found'}, status=500)
+        return JsonResponse({'error': 'Closed status not found'}, status=500)
 
+    results = {'closed': [], 'failed': []}
     for tid in ticket_ids:
         try:
             ticket = Ticket.objects.get(pk=tid)
-            # Permission check: reuse filter_ticket logic
-            if not filter_ticket(request, ticket):
-                failed.append({'id': tid, 'reason': 'Permission denied'})
-                continue
-            if ticket.status == closed_status:
-                closed.append({'id': tid, 'already_closed': True})
-                continue
-            ticket.status = closed_status
-            ticket.save()
-            # Optionally, log the activity
-            log_activity(ticket, request.user, "Batch closed ticket")
-            closed.append({'id': tid, 'closed': True})
         except Ticket.DoesNotExist:
-            failed.append({'id': tid, 'reason': 'Not found'})
-        except Exception as e:
-            failed.append({'id': tid, 'reason': str(e)})
-
-    return JsonResponse({'closed': closed, 'failed': failed})
+            results['failed'].append({'id': tid, 'reason': 'Not found'})
+            continue
+        # Check permission using filter_ticket
+        if not filter_ticket(request, ticket):
+            results['failed'].append({'id': tid, 'reason': 'Permission denied'})
+            continue
+        # Skip if already closed
+        if ticket.status == closed_status:
+            results['failed'].append({'id': tid, 'reason': 'Already closed'})
+            continue
+        # Close the ticket
+        old_status = ticket.status.name
+        ticket.status = closed_status
+        ticket.save()
+        # Log the change as a comment and activity
+        ticket.comments.create(
+            author=request.user,
+            comment=f"Status: {old_status} -> {closed_status.name} (batch closed)"
+        )
+        log_activity(ticket, request.user, "Batch closed ticket")
+        results['closed'].append(tid)
+    return JsonResponse(results, json_dumps_params={"indent":2})

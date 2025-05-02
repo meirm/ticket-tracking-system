@@ -38,4 +38,6 @@ urlpatterns = [
     path('api/v1/search/', views.api_search_tickets, name='api_search_tickets'),
     path('api/v1/batch_close/', views.api_batch_close_tickets, name='api_batch_close_tickets'),
     path('api/v1/load-users/', views.load_users, name='ajax_load_users'),
+    # Batch close tickets API
+    path('api/v1/batch_close/', views.api_batch_close_tickets, name='api_batch_close_tickets'),
 ]
