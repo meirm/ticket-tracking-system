@@ -670,3 +670,59 @@ def downvote_comment(request, ticket_id, comment_id):
     comment.downvotes += 1
     comment.save()
     return redirect('tickets:ticket_detail', ticket_id=ticket_id)
+
+@csrf_exempt
+@api_auth(required=True)
+def api_search_tickets(request):
+    """
+    API endpoint to search tickets by title, description, or assignee username.
+    Accepts:
+      - q: search query (required)
+      - scope: optional, one of 'my', 'hidden', 'closed' to filter results
+    Returns:
+      - JSON list of matching tickets
+    """
+    query = request.GET.get('q', '').strip()
+    scope = request.GET.get('scope', '').lower()
+    if not query:
+        return JsonResponse({'error': 'Missing search query (q)'}, status=400)
+
+    # Search by assignee username if matches
+    user_qs = User.objects.filter(username__icontains=query)
+    if user_qs.exists():
+        all_tickets = Ticket.objects.filter(assignee=user_qs.first())
+    else:
+        all_tickets = Ticket.objects.filter(title__icontains=query) | Ticket.objects.filter(description__icontains=query)
+
+    # Filter by scope
+    if scope == 'my':
+        tickets = all_tickets.filter(assignee=request.user)
+    elif scope == 'hidden':
+        tickets = all_tickets.filter(hidden=True)
+    else:
+        tickets = all_tickets.filter(hidden=False)
+    if scope == 'closed':
+        tickets = tickets.filter(status__closed=True)
+    else:
+        tickets = tickets.exclude(status__closed=True)
+
+    # Apply permission filtering
+    tickets = filter_tickets(request, tickets)
+    ticket_list = tickets.order_by('-updated_at')
+
+    tickets_data = [
+        {
+            'id': ticket.id,
+            'issuer': ticket.issuer.username,
+            'title': ticket.title,
+            'status': ticket.status.name,
+            'priority': ticket.priority.name,
+            'category': ticket.category.name,
+            'assignee': ticket.assignee.username if ticket.assignee else None,
+            'created_at': ticket.created_at.isoformat(),
+            'updated_at': ticket.updated_at.isoformat(),
+            'due_date': ticket.due_date.isoformat() if ticket.due_date else None
+        }
+        for ticket in ticket_list
+    ]
+    return JsonResponse({'tickets': tickets_data}, json_dumps_params={"indent":2}, safe=False)
