@@ -33,7 +33,7 @@
 
         <div class="card-footer text-muted">
             <div>
-                <strong>Created by:</strong> {{ ticket.issuer|date:"Y-m-d H:i:s" }} <br>
+                <strong>Created by:</strong> {{ ticket.issuer.username }} <br>
                 <strong>Created at:</strong> {{ ticket.created_at|date:"Y-m-d H:i:s" }} <br>
                 <strong>Last updated:</strong> {{ ticket.updated_at|date:"Y-m-d H:i:s" }}<br>
                 <strong>Due date:</strong> {{ ticket.due_date|date:"Y-m-d H:i:s" }} <br>
