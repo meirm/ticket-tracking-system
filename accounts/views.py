@@ -12,6 +12,10 @@ from .utils import log_activity
 from django.core.paginator import Paginator
 from .models import Activity, ApiKey, UserProfile
 from .forms import ApiKeyForm
+from django.http import JsonResponse
+import secrets
+import string
+from .auth import api_auth
 
 @login_required
 def api_key_view(request):
@@ -153,3 +157,71 @@ def password_change_view(request):
             messages.error(request, 'Invalid old password.')
             
     return render(request, 'accounts/password_change.html', {'form': PasswordChangeForm()})
+
+@api_auth(required=True)
+@require_POST
+def api_create_user(request):
+    # Only superusers can create users
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'Forbidden. Superuser required.'}, status=403)
+
+    # Parse input
+    data = request.POST or request.body
+    if hasattr(data, 'decode'):
+        import json
+        try:
+            data = json.loads(data.decode())
+        except Exception:
+            return JsonResponse({'error': 'Invalid JSON.'}, status=400)
+    
+    username = data.get('username')
+    email = data.get('email')
+    first_name = data.get('first_name', '')
+    last_name = data.get('last_name', '')
+    enabled = data.get('enabled', True)
+    generate_api_key = data.get('generate_api_key', False)
+
+    # Validate required fields
+    if not username or not email:
+        return JsonResponse({'error': 'username and email are required.'}, status=400)
+    if User.objects.filter(username=username).exists():
+        return JsonResponse({'error': 'Username already exists.'}, status=400)
+    if User.objects.filter(email=email).exists():
+        return JsonResponse({'error': 'Email already exists.'}, status=400)
+
+    # Generate random password
+    password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(12))
+
+    # Create user
+    user = User.objects.create_user(
+        username=username,
+        email=email,
+        password=password,
+        first_name=first_name,
+        last_name=last_name
+    )
+    user.is_active = bool(enabled)
+    user.save()
+
+    # Optionally generate API key
+    api_key_value = None
+    if generate_api_key:
+        api_key = ApiKey(user=user, application='default')
+        api_key.save()
+        api_key_value = api_key.key
+
+    # Log activity
+    log_activity(request.user.username, 'CREATE', log=f'Created user {username}')
+
+    # Prepare response
+    response = {
+        'username': user.username,
+        'email': user.email,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'enabled': user.is_active,
+        'password': password,
+    }
+    if api_key_value:
+        response['api_key'] = api_key_value
+    return JsonResponse(response, status=201)

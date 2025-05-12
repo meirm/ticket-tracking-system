@@ -61,6 +61,7 @@ class TicketBase(BaseModel):
     status_id: Optional[int] = Field(None, description="ID of the current status.")
     assignee_id: Optional[int] = Field(None, description="ID of the user assigned to the ticket.")
     category_id: Optional[int] = Field(None, description="ID of the ticket category.")
+    assigned_group_id: Optional[int] = Field(None, description="ID of the assigned group.")
     # Add other common fields as needed: tags, project, due_date, etc.
 
 # --- User Profile Models ---
@@ -101,7 +102,7 @@ class _NestedStatus(BaseModel):
 
 class TicketCreateRequest(TicketBase):
     """Request model for creating a new ticket. Inherits ID fields.
-       Requires description, assignee_id, category_id, priority_id, status_id as per script.
+       Requires description, assignee_id, category_id, priority_id, status_id, assigned_group_id as per script.
     """
     # Make fields required for creation as per script logic
     description: str = Field(..., description="Detailed description of the ticket.")
@@ -109,6 +110,7 @@ class TicketCreateRequest(TicketBase):
     category_id: int = Field(..., description="ID of the ticket category.")
     priority_id: int = Field(..., description="ID of the priority level.")
     status_id: int = Field(..., description="ID of the current status.")
+    assigned_group_id: int = Field(..., description="ID of the assigned group.")
 
 class TicketUpdateRequest(BaseModel):
     """Request model for updating an existing ticket. All fields are optional.
@@ -121,6 +123,7 @@ class TicketUpdateRequest(BaseModel):
     assignee_id: Optional[int] = Field(None, description="Updated ID of the assignee.")
     category_id: Optional[int] = Field(None, description="Updated ID of the ticket category.")
     due_date: Optional[str] = Field(None, description="Updated due date for the ticket.")
+    assigned_group_id: Optional[int] = Field(None, description="Updated ID of the assigned group.")
     # Add other updatable fields
 
 class TicketResponse(TicketBase):
@@ -248,13 +251,11 @@ async def id_to_username(user_id: int) -> str:
     Helper to map user_id to username by querying the Django API.
     Returns username as string.
     """
-    # NOTE: This assumes the Django API provides a /users/ endpoint that returns user info by ID.
-    # If not available, this should be replaced with a static mapping or cache.
-    url = f"{TTS_API_URL}load-users/"
+    url = f"{TTS_API_URL}assignees/"
     async with httpx.AsyncClient() as client:
         resp = await client.get(url, headers=headers)
         resp.raise_for_status()
-        users = resp.json().get("users", [])
+        users = resp.json().get("results", [])
         for user in users:
             if user.get("id") == user_id:
                 return user.get("username")
@@ -273,6 +274,22 @@ async def id_to_name(model: str, obj_id: int) -> str:
             if item.get("id") == obj_id:
                 return item.get("name")
     raise HTTPException(status_code=400, detail=f"{model.title()} ID {obj_id} not found.")
+
+# --- Helper: Map group ID to group name ---
+async def id_to_group_name(group_id: int) -> str:
+    """
+    Helper to map group_id to group name by querying the Django API.
+    Returns group name as string.
+    """
+    url = f"{TTS_API_URL}groups/"
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(url, headers=headers)
+        resp.raise_for_status()
+        groups = resp.json().get("results", [])
+        for group in groups:
+            if group.get("id") == group_id:
+                return group.get("name")
+    raise HTTPException(status_code=400, detail=f"Group ID {group_id} not found.")
 
 # --- API Endpoints ---
 
@@ -352,6 +369,7 @@ async def create_ticket(ticket_data: TicketCreateRequest):
         "category": await id_to_name("categories", ticket_data.category_id),
         "priority": await id_to_name("priorities", ticket_data.priority_id),
         "status": await id_to_name("statuses", ticket_data.status_id),
+        "assigned_group": await id_to_group_name(ticket_data.assigned_group_id),
         # Add other fields as needed
     }
     # POST to Django API
@@ -470,9 +488,10 @@ async def update_ticket(
         payload["priority"] = await id_to_name("priorities", ticket_data.priority_id)
     if ticket_data.status_id is not None:
         payload["status"] = await id_to_name("statuses", ticket_data.status_id)
-    # Forward due_date if present
     if ticket_data.due_date is not None:
         payload["due_date"] = ticket_data.due_date
+    if ticket_data.assigned_group_id is not None:
+        payload["assigned_group"] = await id_to_group_name(ticket_data.assigned_group_id)
     if not payload:
         print("[DEBUG] No update data provided.")
         raise HTTPException(status_code=400, detail="No update data provided.")
@@ -777,4 +796,18 @@ async def batch_close_tickets(request: BatchCloseRequest):
             raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
         except httpx.HTTPStatusError as exc:
             detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
-            raise HTTPException(status_code=exc.response.status_code, detail=detail) 
+            raise HTTPException(status_code=exc.response.status_code, detail=detail)
+
+# --- List Groups Endpoint ---
+class GroupListItem(BaseModel):
+    id: int = Field(..., description="Unique integer identifier for the group.")
+    name: str = Field(..., description="Display name for the group.")
+
+@tts_app.get("/groups", response_model=PaginatedListResponse[GroupListItem], summary="List all groups")
+async def list_groups(
+    limit: int = Query(50, ge=1, le=100, description="Maximum number of groups to return."),
+    offset: int = Query(0, ge=0, description="Number of groups to skip for pagination.")
+):
+    """Retrieves a paginated list of groups from the external TTS (GET {TTS_API_URL}groups/)."""
+    paginated_dict = await _list_related_items("groups", GroupListItem, limit=limit, offset=offset)
+    return PaginatedListResponse[GroupListItem](**paginated_dict) 
