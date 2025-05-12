@@ -23,6 +23,7 @@
             <tr>
                 <th scope="col">ID</th>
                 <th scope="col">Title</th>
+                <th scope="col">Issuer</th>
                 <th scope="col">Assigned</th>
                 <th scope="col">Group</th>
                 <th scope="col">Category</th>
@@ -39,6 +40,7 @@
             <tr>
                 <th>{{ ticket.id }}</th>
                 <td><a href="{% url 'tickets:ticket_detail' ticket.id %}">{{ ticket.title }}</a></td>
+                <td>{{ ticket.issuer.username }}</td>
                 <td>{{ ticket.assignee }}</td>
                 <td>{{ ticket.assigned_group }}</td>
                 <td>{{ ticket.category }}</td>
