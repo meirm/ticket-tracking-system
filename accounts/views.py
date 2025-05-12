@@ -4,7 +4,7 @@ from django.shortcuts import render
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from .forms import LoginForm, PasswordChangeForm, ProfileForm
@@ -16,6 +16,7 @@ from django.http import JsonResponse
 import secrets
 import string
 from .auth import api_auth
+from django.views.decorators.csrf import csrf_exempt
 
 @login_required
 def api_key_view(request):
@@ -225,3 +226,82 @@ def api_create_user(request):
     if api_key_value:
         response['api_key'] = api_key_value
     return JsonResponse(response, status=201)
+
+@api_auth(required=True)
+@csrf_exempt  # For API use, since we use API key auth
+def api_user_groups(request):
+    """
+    API endpoint for superusers to manage user-group membership.
+    - GET: List all groups for a user (by username or user_id)
+    - POST: Add a user to a group (requires username and group name)
+    - DELETE: Remove a user from a group (requires username and group name)
+    """
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'Forbidden. Superuser required.'}, status=403)
+
+    # Helper to get user by username or id
+    def get_user_from_request(data):
+        username = data.get('username')
+        user_id = data.get('user_id')
+        if username:
+            try:
+                return User.objects.get(username=username)
+            except User.DoesNotExist:
+                return None
+        elif user_id:
+            try:
+                return User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                return None
+        return None
+
+    # Parse input data for POST/DELETE
+    if request.method in ['POST', 'DELETE']:
+        if request.content_type == 'application/json':
+            import json
+            try:
+                data = json.loads(request.body.decode())
+            except Exception:
+                return JsonResponse({'error': 'Invalid JSON.'}, status=400)
+        else:
+            data = request.POST
+    else:
+        data = request.GET
+
+    # GET: List all groups for a user
+    if request.method == 'GET':
+        user = get_user_from_request(data)
+        if not user:
+            return JsonResponse({'error': 'User not found.'}, status=404)
+        groups = list(user.groups.values_list('name', flat=True))
+        return JsonResponse({'username': user.username, 'groups': groups})
+
+    # POST: Add user to group
+    if request.method == 'POST':
+        user = get_user_from_request(data)
+        group_name = data.get('group')
+        if not user or not group_name:
+            return JsonResponse({'error': 'username (or user_id) and group are required.'}, status=400)
+        group, created = Group.objects.get_or_create(name=group_name)
+        user.groups.add(group)
+        user.save()
+        log_activity(request.user.username, 'UPDATE', log=f'Added user {user.username} to group {group_name}')
+        return JsonResponse({'success': True, 'message': f'User {user.username} added to group {group_name}.'})
+
+    # DELETE: Remove user from group
+    if request.method == 'DELETE':
+        user = get_user_from_request(data)
+        group_name = data.get('group')
+        if not user or not group_name:
+            return JsonResponse({'error': 'username (or user_id) and group are required.'}, status=400)
+        try:
+            group = Group.objects.get(name=group_name)
+        except Group.DoesNotExist:
+            return JsonResponse({'error': 'Group not found.'}, status=404)
+        user.groups.remove(group)
+        user.save()
+        log_activity(request.user.username, 'UPDATE', log=f'Removed user {user.username} from group {group_name}')
+        return JsonResponse({'success': True, 'message': f'User {user.username} removed from group {group_name}.'})
+
+    # Method not allowed
+    return JsonResponse({'error': 'Method not allowed.'}, status=405)
