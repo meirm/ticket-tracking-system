@@ -159,6 +159,7 @@ def password_change_view(request):
             
     return render(request, 'accounts/password_change.html', {'form': PasswordChangeForm()})
 
+@csrf_exempt
 @api_auth(required=True)
 @require_POST
 def api_create_user(request):
