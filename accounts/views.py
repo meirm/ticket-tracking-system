@@ -228,8 +228,8 @@ def api_create_user(request):
         response['api_key'] = api_key_value
     return JsonResponse(response, status=201)
 
+@csrf_exempt
 @api_auth(required=True)
-@csrf_exempt  # For API use, since we use API key auth
 def api_user_groups(request):
     """
     API endpoint for superusers to manage user-group membership.
