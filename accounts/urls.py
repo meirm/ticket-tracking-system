@@ -13,6 +13,7 @@ urlpatterns = [
     path('key/deactivate/<str:key>/', views.api_key_deactivate, name='api_key_disable'),
     path('key/activate/<str:key>/', views.api_key_activate, name='api_key_enable'),
     path('key/delete/<str:key>/', views.api_key_delete, name='api_key_delete'),
+    path('api_create_user/', views.api_create_user, name='api_create_user'),
     # API endpoint for superusers to manage user-group membership
     path('api_user_groups/', views.api_user_groups, name='api_user_groups'),
 ]
