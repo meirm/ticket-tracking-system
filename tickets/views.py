@@ -1,6 +1,6 @@
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
-from .models import Changes, Ticket, Category, Status, Priority
+from .models import Changes, Summary, Ticket, Category, Status, Priority
 from .forms import TicketForm, CommentForm
 # Restrict access to the index view to authenticated users only.
 from django.contrib.auth.models import User, Group
@@ -926,15 +926,28 @@ def api_list_assignees(request):
     """
     Returns a JSON list of users who can be assigned tickets (active users).
     """
-    users = User.objects.filter(is_active=True).order_by('username')
-    data = [
+    users = get_user_model().objects.filter(is_active=True).order_by('username')
+    return JsonResponse(
         {
-            'id': user.id,
-            'username': user.username,
-            'email': user.email,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-        }
-        for user in users
-    ]
-    return JsonResponse({'results': data, 'count': len(data)})
+            'users': [
+                {
+                    'id': user.id,
+                    'username': user.username,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                    'email': user.email
+                } for user in users
+            ]
+        },
+        json_dumps_params={"indent":2},
+        safe=False
+    )
+
+@login_required
+def summary_view(request):
+    summaries = Summary.objects.filter(archived=False).order_by('-created_at')
+    context = {
+        'summaries': summaries,
+        'page_title': 'Ticket Summaries'
+    }
+    return render(request, 'tickets/summary.html', context)

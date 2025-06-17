@@ -1,6 +1,12 @@
 from django.db import models
 from django.forms import ValidationError
 
+class TimedModel(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        abstract = True
 
 class Department(models.Model):
     name = models.CharField(max_length=255)
@@ -133,3 +139,16 @@ class Changes(models.Model):
         # Return the log field, which contains the change description
         # Fixes AttributeError: 'Changes' object has no attribute 'change'
         return self.log
+
+class Summary(TimedModel):
+    class Meta:
+        verbose_name_plural = "summaries"
+
+    task_id = models.CharField(max_length=100, unique=True)
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    related_tickets = models.ManyToManyField(Ticket, blank=True)
+    archived = models.BooleanField(default=False)
+    
+    def __str__(self):
+        return self.title
