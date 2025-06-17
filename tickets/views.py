@@ -404,51 +404,70 @@ def ticket_detail(request, ticket_id):
 
 @login_required
 def search_tickets(request):
-    # We want to search for tickets based on the title and description fields.
-    # check the browser history for the query to see if the search was done when showing all tasks, mine, closed, or hidden
-    if 'q' not in request.GET:
-        return redirect('tickets:index')
-    query = request.GET['q']
+    """
+    Search for tickets by title, description, or assignee.
+    This view handles both UI-driven searches (using referer to determine scope)
+    and direct searches with query parameters.
+    """
+    query = request.GET.get('q', '').strip()
     if not query:
+        # Redirect if the search query is missing or empty
         return redirect('tickets:index')
-    # get history from browser
-    history = request.META.get('HTTP_REFERER').split('/')[-2]
-    
-    # check if the search was done when showing all tasks
-     #check if it matches a user
-    if User.objects.filter(username__icontains=query).exists():
-        all_tickets = Ticket.objects.filter(assignee=User.objects.get(username__icontains=query))
+
+    # Base query: search in title, description, or assignee's username
+    user_qs = User.objects.filter(username__icontains=query)
+    if user_qs.exists():
+        tickets = Ticket.objects.filter(assignee__in=user_qs)
     else:
-        all_tickets = Ticket.objects.filter(title__icontains=query) | Ticket.objects.filter(description__icontains=query)
-    if 'my' in history:
-        tickets = all_tickets.filter(assignee=request.user)
-    # check if the search was done when showing hidden tasks
-    elif 'hidden' in history:
-        tickets = all_tickets.filter(hidden=True)
-        
+        tickets = Ticket.objects.filter(title__icontains=query) | Ticket.objects.filter(description__icontains=query)
+
+    # Apply advanced filters from GET parameters (status, priority, etc.)
+    # This makes the view more flexible and API-like
+    advanced_filters = get_ticket_filters(request)
+    if advanced_filters:
+        tickets = tickets.filter(**advanced_filters)
+
+    # For UI-driven searches, use the referer to determine the scope (e.g., 'my', 'closed'),
+    # but only if corresponding filters weren't already provided in the URL.
+    referer = request.META.get('HTTP_REFERER', '')
+    history = referer.split('/')[-2] if '/' in referer else ''
+
+    if 'my' in history and 'assignee' not in request.GET:
+        tickets = tickets.filter(assignee=request.user)
+
+    if 'hidden' in history:
+        tickets = tickets.filter(hidden=True)
     else:
-        tickets = all_tickets.filter(hidden=False)
-    if 'closed' in history:
-        tickets = tickets.filter(status__closed=True)
-    else:
-        tickets = tickets.exclude(status__closed=True)
-    if tickets.count() == 0:
+        tickets = tickets.filter(hidden=False)
+
+    if 'status' not in request.GET:
+        if 'closed' in history:
+            tickets = tickets.filter(status__closed=True)
+        else:
+            tickets = tickets.exclude(status__closed=True)
+
+    # Apply permission filters to the final queryset
+    tickets = filter_tickets(request, tickets).order_by('-updated_at')
+
+    # Display messages to the user
+    if not tickets.exists():
         messages.error(request, f'No tickets found for "{query}"')
     else:
-        messages.success(request, f'Search results for "{query}" coming from {history}')
-    tickets = filter_tickets(request, tickets)
-    ticket_list = tickets.order_by('-updated_at')
-    
+        # Provide a more informative message about the search context
+        search_context = f"from '{history}'" if history else "in all tickets"
+        messages.success(request, f'Search results for "{query}" {search_context}')
+
+    # Paginate the results
     paginator = Paginator(tickets, 10)
-    tickets_count = ticket_list.count()
     page_number = request.GET.get('page')
-    tickets = paginator.get_page(page_number)
+    paginated_tickets = paginator.get_page(page_number)
+
     context = {
-        'tickets': tickets,
+        'tickets': paginated_tickets,
         'page_title': 'Search results',
-        'tickets_count': tickets_count,
+        'tickets_count': tickets.count(),
     }
-    return render(request, 'tickets/index.html',context)
+    return render(request, 'tickets/index.html', context)
     
 
 @login_required
