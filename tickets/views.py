@@ -945,9 +945,120 @@ def api_list_assignees(request):
 
 @login_required
 def summary_view(request):
-    summaries = Summary.objects.filter(archived=False).order_by('-created_at')
+    summaries = Summary.objects.filter(archived=False).prefetch_related('related_tickets')
     context = {
         'summaries': summaries,
         'page_title': 'Ticket Summaries'
     }
     return render(request, 'tickets/summary.html', context)
+
+@csrf_exempt
+@api_auth(required=True)
+def api_summaries(request):
+    if request.method == 'GET':
+        archived_filter = request.GET.get('archived')
+        summaries = Summary.objects.all()
+        if archived_filter is not None:
+            summaries = summaries.filter(archived=(archived_filter.lower() == 'true'))
+
+        summaries_data = []
+        for summary in summaries:
+            summaries_data.append({
+                'id': summary.id,
+                'task_id': summary.task_id,
+                'title': summary.title,
+                'description': summary.description,
+                'related_tickets': [ticket.id for ticket in summary.related_tickets.all()],
+                'archived': summary.archived,
+            })
+        return JsonResponse({'summaries': summaries_data}, json_dumps_params={"indent":2})
+    elif request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+        required_fields = ['task_id', 'title', 'description']
+        for field in required_fields:
+            if field not in data:
+                return JsonResponse({'error': f'Missing required field: {field}'}, status=400)
+        
+        if Summary.objects.filter(task_id=data['task_id']).exists():
+            return JsonResponse({'error': 'task_id must be unique'}, status=400)
+
+        summary = Summary.objects.create(
+            task_id=data['task_id'],
+            title=data['title'],
+            description=data['description'],
+            archived=data.get('archived', False)
+        )
+
+        if 'related_tickets' in data:
+            ticket_ids = data['related_tickets']
+            tickets = Ticket.objects.filter(id__in=ticket_ids)
+            summary.related_tickets.set(tickets)
+
+        return JsonResponse({'summary_id': summary.id, 'status': 'created'}, status=201)
+    else:
+        return JsonResponse({'error': f'Method {request.method} not allowed'}, status=405)
+
+
+@csrf_exempt
+@api_auth(required=True)
+def api_summary_instance(request, summary_id):
+    try:
+        summary = Summary.objects.get(pk=summary_id)
+    except Summary.DoesNotExist:
+        return JsonResponse({'error': 'Summary not found'}, status=404)
+
+    if request.method == 'GET':
+        summary_data = {
+            'id': summary.id,
+            'task_id': summary.task_id,
+            'title': summary.title,
+            'description': summary.description,
+            'related_tickets': [ticket.id for ticket in summary.related_tickets.all()],
+            'archived': summary.archived,
+        }
+        return JsonResponse(summary_data, json_dumps_params={"indent":2})
+
+    elif request.method in ['PUT', 'PATCH']:
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+        if 'task_id' in data:
+            if data['task_id'] != summary.task_id and Summary.objects.filter(task_id=data['task_id']).exists():
+                return JsonResponse({'error': 'task_id must be unique'}, status=400)
+            summary.task_id = data['task_id']
+        if 'title' in data:
+            summary.title = data['title']
+        if 'description' in data:
+            summary.description = data['description']
+        if 'archived' in data:
+            summary.archived = data['archived']
+
+        summary.save()
+
+        if 'related_tickets' in data:
+            ticket_ids = data['related_tickets']
+            tickets = Ticket.objects.filter(id__in=ticket_ids)
+            summary.related_tickets.set(tickets)
+
+        return JsonResponse({'summary_id': summary.id, 'status': 'updated'})
+
+    elif request.method == 'DELETE':
+        summary.delete()
+        return JsonResponse({}, status=204)
+        
+    else:
+        return JsonResponse({'error': f'Method {request.method} not allowed'}, status=405)
+
+@csrf_exempt
+@api_auth(required=True)
+def api_archive_all_summaries(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    updated_count = Summary.objects.filter(archived=False).update(archived=True)
+    return JsonResponse({'status': 'success', 'updated_count': updated_count})

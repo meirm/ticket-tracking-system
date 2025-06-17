@@ -12,17 +12,17 @@
     <div class="accordion" id="summariesAccordion">
         {% for summary in summaries %}
         <div class="accordion-item">
-            <h2 class="accordion-header" id="heading-{{ summary.id }}">
-                <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ summary.id }}" aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}" aria-controls="collapse-{{ summary.id }}">
+            <h2 class="accordion-header" id="heading-{{ summary.task_id }}">
+                <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ summary.task_id }}" aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}" aria-controls="collapse-{{ summary.task_id }}">
                     {{ summary.title }}
                 </button>
             </h2>
-            <div id="collapse-{{ summary.id }}" class="accordion-collapse collapse {% if forloop.first %}show{% endif %}" aria-labelledby="heading-{{ summary.id }}" data-bs-parent="#summariesAccordion">
+            <div id="collapse-{{ summary.task_id }}" class="accordion-collapse collapse {% if forloop.first %}show{% endif %}" aria-labelledby="heading-{{ summary.task_id }}" data-bs-parent="#summariesAccordion">
                 <div class="accordion-body">
                     <p>{{ summary.description }}</p>
                     <p><strong>Related Tickets:</strong>
-                        {% for ticket_id in summary.related_tickets %}
-                            <a href="{% url 'tickets:ticket_detail' ticket_id %}">{{ ticket_id }}</a>{% if not forloop.last %}, {% endif %}
+                        {% for ticket in summary.related_tickets.all %}
+                            <a href="{% url 'tickets:ticket_detail' ticket.id %}">{{ ticket.id }}</a>{% if not forloop.last %}, {% endif %}
                         {% empty %}
                             No related tickets.
                         {% endfor %}

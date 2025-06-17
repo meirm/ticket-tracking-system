@@ -205,6 +205,27 @@ class PaginatedTicketResponse(BaseModel):
     previous: Optional[str] = Field(None, description="URL for the previous page of results, if any.")
     results: List[TicketResponse] = Field(..., description="List of tickets for the current page.")
 
+# Pydantic Models for Summaries
+class SummaryBase(BaseModel):
+    task_id: str = Field(..., description="Unique task identifier for the summary.")
+    title: str = Field(..., description="The title of the summary.")
+    description: str = Field(..., description="Detailed description for the summary task.")
+    related_tickets: List[int] = Field([], description="A list of related ticket IDs.")
+    archived: bool = Field(False, description="Whether the summary is archived.")
+
+class SummaryCreateRequest(SummaryBase):
+    pass
+
+class SummaryUpdateRequest(BaseModel):
+    task_id: Optional[str] = Field(None, description="Updated task identifier.")
+    title: Optional[str] = Field(None, description="Updated title.")
+    description: Optional[str] = Field(None, description="Updated description.")
+    related_tickets: Optional[List[int]] = Field(None, description="Updated list of related ticket IDs.")
+    archived: Optional[bool] = Field(None, description="Updated archived status.")
+
+class SummaryResponse(SummaryBase):
+    id: int = Field(..., description="Unique integer identifier of the summary (assigned by the TTS).")
+
 # --- HTTP Client Setup ---
 # Setup headers for authentication (example using a Bearer Token)
 # Adjust based on your TTS authentication method
@@ -810,4 +831,130 @@ async def list_groups(
 ):
     """Retrieves a paginated list of groups from the external TTS (GET {TTS_API_URL}groups/)."""
     paginated_dict = await _list_related_items("groups", GroupListItem, limit=limit, offset=offset)
-    return PaginatedListResponse[GroupListItem](**paginated_dict) 
+    return PaginatedListResponse[GroupListItem](**paginated_dict)
+
+# API Endpoints for Summaries
+@tts_app.get("/summaries", response_model=List[SummaryResponse], summary="List all summaries")
+async def list_summaries(archived: Optional[bool] = Query(None, description="Filter summaries by archived status.")):
+    """
+    Retrieves a list of summaries from the Django backend.
+    Can be filtered by `archived` status.
+    """
+    target_url = f"{TTS_API_URL}summaries/"
+    params = {}
+    if archived is not None:
+        params['archived'] = str(archived).lower()
+
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(target_url, headers=headers, params=params)
+            response.raise_for_status()
+            data = response.json()
+            return data.get('summaries', [])
+        except httpx.RequestError as exc:
+            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
+        except httpx.HTTPStatusError as exc:
+            detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
+            raise HTTPException(status_code=exc.response.status_code, detail=detail)
+
+@tts_app.post("/summaries", response_model=SummaryResponse, status_code=201, summary="Create a new summary")
+async def create_summary(summary_data: SummaryCreateRequest):
+    """
+    Creates a new summary in the Django backend.
+    """
+    target_url = f"{TTS_API_URL}summaries/"
+    payload = summary_data.model_dump()
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(target_url, json=payload, headers=headers)
+            response.raise_for_status()
+            created_summary_info = response.json()
+            summary_id = created_summary_info.get("summary_id")
+            if not summary_id:
+                raise HTTPException(status_code=500, detail="Summary created but no ID returned.")
+            return await get_summary(summary_id)
+        except httpx.RequestError as exc:
+            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
+        except httpx.HTTPStatusError as exc:
+            detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
+            raise HTTPException(status_code=exc.response.status_code, detail=detail)
+
+@tts_app.get("/summaries/{summary_id}", response_model=SummaryResponse, summary="Get a specific summary by ID")
+async def get_summary(summary_id: int):
+    """
+    Retrieves details for a single summary.
+    """
+    target_url = f"{TTS_API_URL}summaries/{summary_id}/"
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(target_url, headers=headers)
+            response.raise_for_status()
+            return response.json()
+        except httpx.RequestError as exc:
+            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 404:
+                raise HTTPException(status_code=404, detail=f"Summary with ID '{summary_id}' not found in TTS.")
+            else:
+                detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
+                raise HTTPException(status_code=exc.response.status_code, detail=detail)
+
+@tts_app.put("/summaries/{summary_id}", response_model=SummaryResponse, summary="Update an existing summary")
+async def update_summary(summary_id: int, summary_data: SummaryUpdateRequest):
+    """
+    Updates an existing summary.
+    """
+    target_url = f"{TTS_API_URL}summaries/{summary_id}/"
+    payload = summary_data.model_dump(exclude_unset=True)
+    if not payload:
+        raise HTTPException(status_code=400, detail="No update data provided.")
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.put(target_url, json=payload, headers=headers)
+            response.raise_for_status()
+            return await get_summary(summary_id)
+        except httpx.RequestError as exc:
+            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 404:
+                raise HTTPException(status_code=404, detail=f"Summary with ID '{summary_id}' not found in TTS.")
+            else:
+                detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
+                raise HTTPException(status_code=exc.response.status_code, detail=detail)
+
+@tts_app.delete("/summaries/{summary_id}", status_code=204, summary="Delete a summary by ID")
+async def delete_summary(summary_id: int):
+    """
+    Deletes a summary by its ID.
+    """
+    target_url = f"{TTS_API_URL}summaries/{summary_id}/"
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.delete(target_url, headers=headers)
+            response.raise_for_status()
+            return None
+        except httpx.RequestError as exc:
+            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 404:
+                raise HTTPException(status_code=404, detail=f"Summary with ID '{summary_id}' not found in TTS.")
+            else:
+                detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
+                raise HTTPException(status_code=exc.response.status_code, detail=detail)
+
+@tts_app.post("/summaries/archive_all", summary="Archive all unarchived summaries")
+async def archive_all_summaries():
+    """
+    Sends a request to the backend to archive all summaries that are not currently archived.
+    """
+    target_url = f"{TTS_API_URL}summaries/archive_all/"
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(target_url, headers=headers)
+            response.raise_for_status()
+            return response.json()
+        except httpx.RequestError as exc:
+            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
+        except httpx.HTTPStatusError as exc:
+            detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
+            raise HTTPException(status_code=exc.response.status_code, detail=detail) 

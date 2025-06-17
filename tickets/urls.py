@@ -49,4 +49,8 @@ urlpatterns = [
     path('api/v1/profile/', views.api_profile, name='api_profile'),
     path('api/v1/users/<int:user_id>/', views.api_user_detail, name='api_user_detail'),
     path('api/v1/assignees/', views.api_list_assignees, name='api_list_assignees'),
+    # API for summaries
+    path('api/v1/summaries/', views.api_summaries, name='api_summaries'),
+    path('api/v1/summaries/<int:summary_id>/', views.api_summary_instance, name='api_summary_instance'),
+    path('api/v1/summaries/archive_all/', views.api_archive_all_summaries, name='api_archive_all_summaries'),
 ]
