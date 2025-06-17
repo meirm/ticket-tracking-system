@@ -646,6 +646,20 @@ def unhide_ticket(request, ticket_id):
     return redirect('tickets:index')
 
 @login_required
+def close_ticket(request, ticket_id):
+    ticket = Ticket.objects.get(pk=ticket_id)
+    closed_status = Status.objects.get(name='Closed')
+    ticket.status = closed_status
+    ticket.save()
+    # Add a comment
+    ticket.comments.create(
+        author=request.user,
+        comment=f"Ticket closed by {request.user.username}"
+    )
+    log_activity(ticket, request.user, "Closed ticket")
+    return redirect('tickets:ticket_detail', ticket_id=ticket.id)
+
+@login_required
 def new_comment(request, ticket_id):
     ticket = Ticket.objects.get(pk=ticket_id)
     ticket = filter_ticket(request, ticket)

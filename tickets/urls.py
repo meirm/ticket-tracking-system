@@ -22,6 +22,7 @@ urlpatterns = [
     path('<int:ticket_id>/edit/', views.edit_ticket, name='edit_ticket'),
     path('<int:ticket_id>/hide/', views.hide_ticket, name='hide_ticket'),
     path('<int:ticket_id>/unhide/', views.unhide_ticket, name='unhide_ticket'),
+    path('<int:ticket_id>/close/', views.close_ticket, name='close_ticket'),
     path('<int:ticket_id>/comment/', views.new_comment, name='new_comment'),
     path('<int:ticket_id>/comment/<int:comment_id>/edit/', views.edit_comment, name='edit_comment'),
     path('<int:ticket_id>/comment/<int:comment_id>/delete/', views.delete_comment, name='delete_comment'),

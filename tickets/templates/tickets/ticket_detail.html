@@ -18,6 +18,9 @@
                 {% else %}
                 <a href="{% url 'tickets:hide_ticket' ticket.id %}" class="btn btn-sm btn-outline-warning">Hide</a>
                 {% endif %}
+                {% if ticket.status.name != 'Closed' %}
+                <a href="{% url 'tickets:close_ticket' ticket.id %}" class="btn btn-sm btn-outline-danger">Close</a>
+                {% endif %}
             </div>
         </div>
 
