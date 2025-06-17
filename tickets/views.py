@@ -186,9 +186,11 @@ def get_ticket_filters(request):
     """
     filter = {}
     if 'status' in request.GET:
-        filter['status__in'] = request.GET['status'].split(",")
+        # Filter by status name, not status object
+        filter['status__name__in'] = request.GET['status'].split(",")
     if 'priority' in request.GET:
-        filter['priority__in'] = request.GET['priority'].split(",")
+        # Filter by priority name, not priority object
+        filter['priority__name__in'] = request.GET['priority'].split(",")
     if 'from_date' in request.GET:
         filter['created_at__gte'] = request.GET['from_date']
     if 'to_date' in request.GET:

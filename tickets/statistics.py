@@ -10,7 +10,7 @@ class Statistics:
     def overdue_task_count():
         # Count the number of overdue tasks (tickets still open and past due date)
         overdue_count = Ticket.objects.filter(
-            status__in=[Ticket.Status.OPEN, Ticket.Status.IN_PROGRESS],  # Still open
+            status__name__in=['Open', 'In Progress'],  # Still open
             due_date__lt=now()  # Past their due date
         ).count()
         return overdue_count
@@ -19,7 +19,7 @@ class Statistics:
     def not_overdue_task_count():
         # Count the number of tasks resolved before the deadline
         not_overdue_count = Ticket.objects.filter(
-            status__in=[Ticket.Status.RESOLVED, Ticket.Status.CLOSED],  # Resolved or closed
+            status__name__in=['Resolved', 'Closed'],  # Resolved or closed
             updated_at__lt=F('due_date')  # Resolved before due date
         ).count()
         return not_overdue_count
@@ -34,7 +34,7 @@ class Statistics:
     def open_tickets_per_user_category():
         # Open tickets categorized by user and ticket category
         return Ticket.objects.filter(
-            status__in=[Ticket.Status.OPEN, Ticket.Status.IN_PROGRESS]
+            status__name__in=['Open', 'In Progress']
         ).values('assignee__username', 'category').annotate(
             total_tickets=Count('id')
         ).order_by('assignee__username', 'category')
@@ -43,7 +43,7 @@ class Statistics:
     def closed_tickets_per_user_category():
         # Closed tickets categorized by user and ticket category
         return Ticket.objects.filter(
-            status__in=[Ticket.Status.RESOLVED, Ticket.Status.CLOSED]
+            status__name__in=['Resolved', 'Closed']
         ).values('assignee__username', 'category').annotate(
             total_tickets=Count('id')
         ).order_by('assignee__username', 'category')
@@ -51,7 +51,7 @@ class Statistics:
     @staticmethod
     def average_ticket_resolution_time():
         # Assuming 'RESOLVED' status means the ticket is completed
-        tickets = Ticket.objects.filter(status__in=[Ticket.Status.RESOLVED, Ticket.Status.CLOSED])
+        tickets = Ticket.objects.filter(status__name__in=['Resolved', 'Closed'])
         
         # Calculate the time difference in seconds (or any other unit)
         tickets = tickets.annotate(
@@ -70,7 +70,7 @@ class Statistics:
     def open_tickets_assignee_to_users():
         # Tickets that are still open (not resolved or closed)
         return Ticket.objects.filter(
-            status__in=[Ticket.Status.OPEN, Ticket.Status.IN_PROGRESS]
+            status__name__in=['Open', 'In Progress']
         ).values('assignee__username').annotate(
             total_tickets=Count('id')
         ).order_by('-total_tickets')
@@ -79,7 +79,7 @@ class Statistics:
     def closed_tickets_assignee_to_users():
         # Tickets that are closed (resolved or closed)
         return Ticket.objects.filter(
-            status__in=[Ticket.Status.RESOLVED, Ticket.Status.CLOSED]
+            status__name__in=['Resolved', 'Closed']
         ).values('assignee__username').annotate(
             total_tickets=Count('id')
         ).order_by('-total_tickets')
