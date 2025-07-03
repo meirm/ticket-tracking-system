@@ -306,3 +306,37 @@ def api_user_groups(request):
 
     # Method not allowed
     return JsonResponse({'error': 'Method not allowed.'}, status=405)
+
+@csrf_exempt
+@api_auth(required=True)
+def api_groups(request):
+    """
+    List all groups.
+    """
+    groups = Group.objects.all().order_by('name')
+    data = [{"id": g.id, "name": g.name} for g in groups]
+    return JsonResponse({"groups": data})
+
+@csrf_exempt
+@api_auth(required=True)
+def api_group_members(request):
+    """
+    List all members of a group by group name or id.
+    """
+    group_name = request.GET.get("group")
+    group_id = request.GET.get("group_id")
+    if group_id:
+        try:
+            group = Group.objects.get(id=group_id)
+        except Group.DoesNotExist:
+            return JsonResponse({"error": "Group not found."}, status=404)
+    elif group_name:
+        try:
+            group = Group.objects.get(name=group_name)
+        except Group.DoesNotExist:
+            return JsonResponse({"error": "Group not found."}, status=404)
+    else:
+        return JsonResponse({"error": "Missing group or group_id parameter."}, status=400)
+    members = group.user_set.all()
+    data = [{"id": u.id, "username": u.username, "email": u.email} for u in members]
+    return JsonResponse({"group": group.name, "members": data})

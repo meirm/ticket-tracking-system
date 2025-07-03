@@ -16,4 +16,6 @@ urlpatterns = [
     path('api_create_user/', views.api_create_user, name='api_create_user'),
     # API endpoint for superusers to manage user-group membership
     path('api_user_groups/', views.api_user_groups, name='api_user_groups'),
+    path('api_groups/', views.api_groups, name='api_groups'),
+    path('api_group_members/', views.api_group_members, name='api_group_members'),
 ]

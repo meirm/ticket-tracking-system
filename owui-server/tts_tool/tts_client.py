@@ -1,5 +1,7 @@
 import httpx
 from typing import Optional, Dict, Any, List
+import os
+from urllib.parse import urljoin
 
 # TTSClient: Encapsulates all TTS API communication logic for reuse in CLI and server
 class TTSClient:
@@ -268,11 +270,26 @@ class TTSClient:
         """
         return self.list_related_items("statuses", limit=limit, offset=offset)
 
-    def list_groups(self, limit: int = 50, offset: int = 0) -> dict:
+    def list_groups(self) -> dict:
         """
-        List groups from the TTS API. Returns paginated dict.
+        List groups from the TTS API using the new /accounts/api_groups/ endpoint.
         """
-        return self.list_related_items("groups", limit=limit, offset=offset)
+        api_url = os.getenv("TTS_API_URL")
+        api_token = os.getenv("TTS_API_TOKEN")
+        if not api_url or not api_token:
+            raise RuntimeError("TTS_API_URL and TTS_API_TOKEN must be set in the environment.")
+        # Remove any trailing path and add /accounts/api_groups/
+        base_url = api_url.split('/tickets')[0]  # up to the domain
+        url = urljoin(base_url, '/accounts/api_groups/')
+        headers = {"X-API-AUTH": api_token}
+        try:
+            import requests
+            resp = requests.get(url, headers=headers)
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as e:
+            print(f"[ERROR] Failed to list groups: {e}")
+            raise
 
     def get_user(self, user_id: int) -> dict:
         """

@@ -9,6 +9,8 @@ import json
 from tts_client import TTSClient
 from models import TicketCreateRequest, TicketResponse, TicketUpdateRequest, CommentCreateRequest, CommentResponse, UserProfile, ProfileUpdateRequest, UserListItem, CategoryListItem, PriorityListItem, StatusListItem, PaginatedListResponse, SummaryCreateRequest, SummaryResponse, SummaryUpdateRequest
 from fastapi.concurrency import run_in_threadpool
+from urllib.parse import urljoin
+import requests
 
 # --- Configuration ---
 # Load TTS connection details from environment variables for security
@@ -599,4 +601,52 @@ async def archive_all_summaries():
         result = await run_in_threadpool(_tts_client.archive_all_summaries)
         return result
     except Exception as e:
-        raise HTTPException(status_code=503, detail=f"Error archiving all summaries: {e}") 
+        raise HTTPException(status_code=503, detail=f"Error archiving all summaries: {e}")
+
+@tts_app.get("/groups/all", summary="List all groups (proxy to Django)")
+async def list_all_groups():
+    """
+    Proxies to the Django /accounts/api_groups/ endpoint.
+    """
+    api_url = os.getenv("TTS_API_URL")
+    api_token = os.getenv("TTS_API_TOKEN")
+    base_url = api_url.split('/tickets')[0]
+    url = urljoin(base_url, '/accounts/api_groups/')
+    headers = {"X-API-AUTH": api_token}
+    resp = requests.get(url, headers=headers)
+    resp.raise_for_status()
+    return resp.json()
+
+@tts_app.get("/groups/members", summary="List all members of a group (proxy to Django)")
+async def get_group_members(group: str = Query(..., description="Group name")):
+    """
+    Proxies to the Django /accounts/api_group_members/ endpoint.
+    """
+    api_url = os.getenv("TTS_API_URL")
+    api_token = os.getenv("TTS_API_TOKEN")
+    base_url = api_url.split('/tickets')[0]
+    url = urljoin(base_url, '/accounts/api_group_members/')
+    headers = {"X-API-AUTH": api_token}
+    params = {"group": group}
+    resp = requests.get(url, headers=headers, params=params)
+    if resp.status_code == 404:
+        return {"error": f"Group '{group}' not found."}
+    resp.raise_for_status()
+    return resp.json()
+
+@tts_app.get("/users/groups", summary="List all groups for a user (proxy to Django)")
+async def get_user_groups(username: str = Query(..., description="Username")):
+    """
+    Proxies to the Django /accounts/api_user_groups/ endpoint.
+    """
+    api_url = os.getenv("TTS_API_URL")
+    api_token = os.getenv("TTS_API_TOKEN")
+    base_url = api_url.split('/tickets')[0]
+    url = urljoin(base_url, '/accounts/api_user_groups/')
+    headers = {"X-API-AUTH": api_token}
+    params = {"username": username}
+    resp = requests.get(url, headers=headers, params=params)
+    if resp.status_code == 404:
+        return {"error": f"User '{username}' not found."}
+    resp.raise_for_status()
+    return resp.json() 
