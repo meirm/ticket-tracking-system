@@ -6,7 +6,9 @@ from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict, Any, TypeVar, Generic
 import os
 import json
-import httpx  # Using httpx for async HTTP requests, recommended with FastAPI
+from tts_client import TTSClient
+from models import TicketCreateRequest, TicketResponse, TicketUpdateRequest, CommentCreateRequest, CommentResponse, UserProfile, ProfileUpdateRequest, UserListItem, CategoryListItem, PriorityListItem, StatusListItem, PaginatedListResponse, SummaryCreateRequest, SummaryResponse, SummaryUpdateRequest
+from fastapi.concurrency import run_in_threadpool
 
 # --- Configuration ---
 # Load TTS connection details from environment variables for security
@@ -48,184 +50,6 @@ tts_app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- Pydantic Models ---
-# Define data structures for requests and responses
-# NOTE: Adjust these models based on the *actual* fields your TTS uses!
-
-class TicketBase(BaseModel):
-    """Base model for core ticket fields. Uses IDs for relations."""
-    title: str = Field(..., description="The title of the ticket.")
-    description: Optional[str] = Field(None, description="Detailed description of the ticket.")
-    # Use IDs based on script payload
-    priority_id: Optional[int] = Field(None, description="ID of the priority level.")
-    status_id: Optional[int] = Field(None, description="ID of the current status.")
-    assignee_id: Optional[int] = Field(None, description="ID of the user assigned to the ticket.")
-    category_id: Optional[int] = Field(None, description="ID of the ticket category.")
-    assigned_group_id: Optional[int] = Field(None, description="ID of the assigned group.")
-    # Add other common fields as needed: tags, project, due_date, etc.
-
-# --- User Profile Models ---
-class UserProfile(BaseModel):
-    """Detailed response model for a user profile."""
-    id: int
-    username: str # Assuming username is part of profile and usually read-only
-    email: Optional[str] = None
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    model_config = ConfigDict(from_attributes=True) # Ensure compatibility if using ORM
-
-# --- ADD: Model for Profile Update Request ---
-class ProfileUpdateRequest(BaseModel):
-    """Request model for updating the user profile. Only allowed fields."""
-    email: Optional[str] = Field(None, description="New email address.")
-    first_name: Optional[str] = Field(None, description="New first name.")
-    last_name: Optional[str] = Field(None, description="New last name.")
-
-# --- Helper Models for Nested Data in TicketResponse --- START
-# These models match the structure observed in the API response for nested objects
-# within a ticket, preventing validation errors in TicketResponse.
-
-class _NestedCategory(BaseModel):
-    id: int
-    name: str
-
-class _NestedPriority(BaseModel):
-    id: int
-    name: str
-
-class _NestedStatus(BaseModel):
-    id: int
-    name: str
-    closed: Optional[bool] = None # Field observed in ticket list response
-
-# --- Helper Models for Nested Data in TicketResponse --- END
-
-class TicketCreateRequest(TicketBase):
-    """Request model for creating a new ticket. Inherits ID fields.
-       Requires description, assignee_id, category_id, priority_id, status_id, assigned_group_id as per script.
-    """
-    # Make fields required for creation as per script logic
-    description: str = Field(..., description="Detailed description of the ticket.")
-    assignee_id: int = Field(..., description="ID of the user assigned to the ticket.")
-    category_id: int = Field(..., description="ID of the ticket category.")
-    priority_id: int = Field(..., description="ID of the priority level.")
-    status_id: int = Field(..., description="ID of the current status.")
-    assigned_group_id: int = Field(..., description="ID of the assigned group.")
-
-class TicketUpdateRequest(BaseModel):
-    """Request model for updating an existing ticket. All fields are optional.
-       Uses ID fields for relations.
-    """
-    title: Optional[str] = Field(None, description="The updated title of the ticket.")
-    description: Optional[str] = Field(None, description="Updated detailed description.")
-    priority_id: Optional[int] = Field(None, description="Updated ID of the priority level.")
-    status_id: Optional[int] = Field(None, description="Updated ID of the status.")
-    assignee_id: Optional[int] = Field(None, description="Updated ID of the assignee.")
-    category_id: Optional[int] = Field(None, description="Updated ID of the ticket category.")
-    due_date: Optional[str] = Field(None, description="Updated due date for the ticket.")
-    assigned_group_id: Optional[int] = Field(None, description="Updated ID of the assigned group.")
-    # Add other updatable fields
-
-class TicketResponse(TicketBase):
-    """Response model representing a ticket. Includes system fields like ID, timestamps, and nested objects.
-       Inherits basic fields from TicketBase, but uses specific nested models for related entities.
-    """
-    id: int = Field(..., description="Unique integer identifier of the ticket (assigned by the TTS).")
-    created_at: Optional[str] = Field(None, description="Timestamp when the ticket was created.")
-    updated_at: Optional[str] = Field(None, description="Timestamp when the ticket was last updated.")
-    due_date: Optional[str] = Field(None, description="Optional due date for the ticket.") # Added based on CLI output
-
-    # --- FIX: Use renamed UserProfile model ---
-    # Replace Optional[str] or potentially inherited fields from TicketBase with correct nested models
-    issuer: Optional[UserProfile] = Field(None, description="User object who created the ticket.")
-    assignee: Optional[UserProfile] = Field(None, description="User object assigned to the ticket.")
-    category: Optional[_NestedCategory] = Field(None, description="Category object associated with the ticket.")
-    priority: Optional[_NestedPriority] = Field(None, description="Priority object associated with the ticket.")
-    status: Optional[_NestedStatus] = Field(None, description="Status object associated with the ticket.")
-
-    # NOTE: We keep TicketBase inheritance for title, description.
-    # The *_id fields from TicketBase are ignored by Pydantic during parsing
-    # if fields with the base name (e.g., 'priority') are present and match incoming data.
-    # No need to explicitly exclude them unless causing issues.
-
-# Models for listing related entities (Users, Categories, etc.)
-class ListItemBase(BaseModel):
-    """Base model for items in list endpoints (e.g., User, Category)."""
-    id: int = Field(..., description="Unique integer identifier.")
-    name: Optional[str] = Field(None, description="Optional display name.")
-    # Add other fields if provided by the TTS API (e.g., description, email for user)
-
-class UserListItem(ListItemBase):
-    """Response model for an item in the list_users response."""
-    username: str = Field(..., description="User's unique username.")
-    email: Optional[str] = Field(None, description="User's email address.")
-    first_name: Optional[str] = Field(None, description="User's first name.")
-    last_name: Optional[str] = Field(None, description="User's last name.")
-
-class CategoryListItem(ListItemBase):
-    """Response model for an item in the list_categories response."""
-    name: str = Field(..., description="Display name for the category.")
-
-class PriorityListItem(ListItemBase):
-    """Response model for an item in the list_priorities response."""
-    name: str = Field(..., description="Display name for the priority.")
-
-class StatusListItem(ListItemBase):
-    """Response model for an item in the list_statuses response."""
-    name: str = Field(..., description="Display name for the status.")
-
-class CommentCreateRequest(BaseModel):
-    """Request model for adding a comment."""
-    text: str = Field(..., description="The content of the comment.")
-
-class CommentResponse(BaseModel):
-    """Response model representing a comment."""
-    id: str = Field(..., description="Unique identifier of the comment.")
-    text: str = Field(..., description="The content of the comment.")
-    author: Optional[str] = Field(None, description="User who posted the comment.")
-    created_at: Optional[str] = Field(None, description="Timestamp when the comment was created.")
-
-# --- ADD: Generic Model for Paginated Lists ---
-ListItemType = TypeVar('ListItemType')
-
-# FIX: Inherit from BaseModel before Generic[ListItemType]
-class PaginatedListResponse(BaseModel, Generic[ListItemType]):
-    """Generic response model for any paginated list result."""
-    count: int = Field(..., description="Total number of items available.")
-    next: Optional[str] = Field(None, description="URL for the next page of results, if any.")
-    previous: Optional[str] = Field(None, description="URL for the previous page of results, if any.")
-    results: List[ListItemType] = Field(..., description="List of items for the current page.")
-
-# --- END ADD ---
-
-class PaginatedTicketResponse(BaseModel):
-    """Response model for paginated ticket list results."""
-    count: int = Field(..., description="Total number of tickets available.")
-    next: Optional[str] = Field(None, description="URL for the next page of results, if any.")
-    previous: Optional[str] = Field(None, description="URL for the previous page of results, if any.")
-    results: List[TicketResponse] = Field(..., description="List of tickets for the current page.")
-
-# Pydantic Models for Summaries
-class SummaryBase(BaseModel):
-    task_id: str = Field(..., description="Unique task identifier for the summary.")
-    title: str = Field(..., description="The title of the summary.")
-    description: str = Field(..., description="Detailed description for the summary task.")
-    related_tickets: List[int] = Field([], description="A list of related ticket IDs.")
-    archived: bool = Field(False, description="Whether the summary is archived.")
-
-class SummaryCreateRequest(SummaryBase):
-    pass
-
-class SummaryUpdateRequest(BaseModel):
-    task_id: Optional[str] = Field(None, description="Updated task identifier.")
-    title: Optional[str] = Field(None, description="Updated title.")
-    description: Optional[str] = Field(None, description="Updated description.")
-    related_tickets: Optional[List[int]] = Field(None, description="Updated list of related ticket IDs.")
-    archived: Optional[bool] = Field(None, description="Updated archived status.")
-
-class SummaryResponse(SummaryBase):
-    id: int = Field(..., description="Unique integer identifier of the summary (assigned by the TTS).")
-
 # --- HTTP Client Setup ---
 # Setup headers for authentication (example using a Bearer Token)
 # Adjust based on your TTS authentication method
@@ -234,6 +58,9 @@ headers = {
     "Content-Type": "application/json",
     "Accept": "application/json",
 }
+
+# Instantiate the TTSClient for use in all endpoints
+_tts_client = TTSClient(TTS_API_URL, TTS_API_TOKEN)
 
 # --- Helper: Normalize ticket fields to match Pydantic models ---
 def normalize_ticket_fields(ticket):
@@ -327,89 +154,48 @@ async def search_tickets(
     issuer: str = Query(None, description="Comma-separated list of issuer usernames to filter by")
 ):
     """
-    Proxies search requests to the Django TTS API's search endpoint.
-    Accepts:
-      - q (required): search query (title, description, or assignee username)
-      - scope (optional): one of 'my', 'hidden', 'closed' to filter results
-      - status (optional): comma-separated list of statuses
-      - priority (optional): comma-separated list of priorities
-      - from_date (optional): filter by created_at >= from_date
-      - to_date (optional): filter by created_at <= to_date
-      - due_date (optional): comma-separated list of due dates
-      - assignee (optional): comma-separated list of assignee usernames
-      - issuer (optional): comma-separated list of issuer usernames
-    All filter parameters are passed to the backend and combined with the search query.
-    Returns a list of matching tickets as JSON.
+    Proxies search requests to the TTS API's search endpoint using TTSClient.
     """
     if not q.strip():
         raise HTTPException(status_code=400, detail="Missing search query (q)")
-    # Build target URL and params
-    target_url = f"{TTS_API_URL}search/"
-    params = {"q": q}
-    if scope:
-        params["scope"] = scope
-    # Add filters if present
-    if status:
-        params["status"] = status
-    if priority:
-        params["priority"] = priority
-    if from_date:
-        params["from_date"] = from_date
-    if to_date:
-        params["to_date"] = to_date
-    if due_date:
-        params["due_date"] = due_date
-    if assignee:
-        params["assignee"] = assignee
-    if issuer:
-        params["issuer"] = issuer
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(target_url, headers=headers, params=params)
-            response.raise_for_status()
-            data = response.json()
-            tickets = data.get("tickets", [])
-            # Normalize ticket fields for frontend compatibility
-            return {"tickets": [normalize_ticket_fields(t) for t in tickets]}
-        except httpx.RequestError as exc:
-            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
-        except httpx.HTTPStatusError as exc:
-            detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
-            raise HTTPException(status_code=exc.response.status_code, detail=detail)
+    try:
+        data = await run_in_threadpool(_tts_client.search_tickets, q, scope, status, priority, from_date, to_date, due_date, assignee, issuer)
+        tickets = data.get("tickets", [])
+        return {"tickets": [normalize_ticket_fields(t) for t in tickets]}
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Error searching tickets: {e}")
 
 @tts_app.post("/tickets", response_model=TicketResponse, status_code=201, summary="Create a new ticket")
 async def create_ticket(ticket_data: TicketCreateRequest):
     """
-    Receives ticket details (using IDs for relations), maps to Django API fields, and forwards to /tickets/api/v1/create/.
+    Receives ticket details, maps to Django API fields, and forwards to TTSClient.
     """
-    # Map IDs to names/usernames as required by Django API
-    payload = {
-        "title": ticket_data.title,
-        "description": ticket_data.description,
-        "assignee": await id_to_username(ticket_data.assignee_id),
-        "category": await id_to_name("categories", ticket_data.category_id),
-        "priority": await id_to_name("priorities", ticket_data.priority_id),
-        "status": await id_to_name("statuses", ticket_data.status_id),
-        "assigned_group": await id_to_group_name(ticket_data.assigned_group_id),
-        # Add other fields as needed
-    }
-    # POST to Django API
-    target_url = f"{TTS_API_URL}create/"
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(target_url, json=payload, headers=headers)
-            response.raise_for_status()
-            result = response.json()
-            # Django returns only ticket_id; fetch full details
-            ticket_id = result.get("ticket_id")
-            if not ticket_id:
-                raise HTTPException(status_code=500, detail="No ticket_id returned from Django API.")
-            return await get_ticket(ticket_id)
-        except httpx.RequestError as exc:
-            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
-        except httpx.HTTPStatusError as exc:
-            detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
-            raise HTTPException(status_code=exc.response.status_code, detail=detail)
+    try:
+        # Map IDs to names/usernames as required by Django API using TTSClient helpers
+        assignee = await run_in_threadpool(_tts_client.id_to_username, ticket_data.assignee_id)
+        category = await run_in_threadpool(_tts_client.id_to_name, "categories", ticket_data.category_id)
+        priority = await run_in_threadpool(_tts_client.id_to_name, "priorities", ticket_data.priority_id)
+        status = await run_in_threadpool(_tts_client.id_to_name, "statuses", ticket_data.status_id)
+        assigned_group = await run_in_threadpool(_tts_client.id_to_group_name, ticket_data.assigned_group_id)
+        payload = {
+            "title": ticket_data.title,
+            "description": ticket_data.description,
+            "assignee": assignee,
+            "category": category,
+            "priority": priority,
+            "status": status,
+            "assigned_group": assigned_group,
+        }
+        # Create the ticket
+        result = await run_in_threadpool(_tts_client.create_ticket, payload)
+        ticket_id = result.get("ticket_id")
+        if not ticket_id:
+            raise HTTPException(status_code=500, detail="No ticket_id returned from TTS API.")
+        # Fetch and return the full ticket details
+        ticket = await run_in_threadpool(_tts_client.get_ticket, ticket_id)
+        return normalize_ticket_fields(ticket)
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Error creating ticket: {e}")
 
 @tts_app.get("/tickets")
 async def list_tickets(
@@ -422,19 +208,8 @@ async def list_tickets(
     issuer: str = Query(None, description="Comma-separated list of issuer usernames to filter by")
 ):
     """
-    Retrieves a list of tickets from /tickets/api/v1/list/ and maps to expected output.
-    Accepts optional filter parameters:
-      - status: comma-separated list of statuses
-      - priority: comma-separated list of priorities
-      - from_date: filter by created_at >= from_date
-      - to_date: filter by created_at <= to_date
-      - due_date: comma-separated list of due dates
-      - assignee: comma-separated list of assignee usernames
-      - issuer: comma-separated list of issuer usernames
-    All filter parameters are passed to the backend and combined with the ticket listing.
-    Returns a list of tickets as JSON.
+    Retrieves a list of tickets from the TTS API using TTSClient. Accepts optional filter parameters.
     """
-    target_url = f"{TTS_API_URL}list/"
     params = {}
     if status:
         params["status"] = status
@@ -450,42 +225,25 @@ async def list_tickets(
         params["assignee"] = assignee
     if issuer:
         params["issuer"] = issuer
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(target_url, headers=headers, params=params)
-            response.raise_for_status()
-            data = response.json()
-            # Django returns {'tickets': [...]}
-            tickets = data.get("tickets", [])
-            # Map each ticket to expected output
-            return {"tickets": [normalize_ticket_fields(t) for t in tickets]}
-        except httpx.RequestError as exc:
-            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
-        except httpx.HTTPStatusError as exc:
-            detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
-            raise HTTPException(status_code=exc.response.status_code, detail=detail)
+    try:
+        # Call the sync TTSClient method in a threadpool to keep endpoint async
+        data = await run_in_threadpool(_tts_client.list_tickets, params)
+        tickets = data.get("tickets", [])
+        # Normalize ticket fields for frontend compatibility
+        return {"tickets": [normalize_ticket_fields(t) for t in tickets]}
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {e}")
 
 @tts_app.get("/tickets/{ticket_id}", response_model=TicketResponse, summary="Get a specific ticket by ID")
 async def get_ticket(ticket_id: int = Path(..., description="The unique integer ID of the ticket to retrieve.")):
     """
-    Retrieves details for a single ticket from /tickets/api/v1/detail/{ticket_id}/.
+    Retrieves details for a single ticket from the TTS API using TTSClient.
     """
-    target_url = f"{TTS_API_URL}detail/{ticket_id}/"
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(target_url, headers=headers)
-            response.raise_for_status()
-            ticket_data = response.json()
-            print(f"[DEBUG] Retrieved ticket data for ticket_id={ticket_id}: {json.dumps(ticket_data, indent=4)}")
-            return normalize_ticket_fields(ticket_data)
-        except httpx.RequestError as exc:
-            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 404:
-                raise HTTPException(status_code=404, detail=f"Ticket with ID '{ticket_id}' not found in TTS.")
-            else:
-                detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
-                raise HTTPException(status_code=exc.response.status_code, detail=detail)
+    try:
+        ticket_data = await run_in_threadpool(_tts_client.get_ticket, ticket_id)
+        return normalize_ticket_fields(ticket_data)
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"Ticket with ID '{ticket_id}' not found in TTS. {e}")
 
 @tts_app.put("/tickets/{ticket_id}", response_model=TicketResponse, summary="Update an existing ticket")
 async def update_ticket(
@@ -497,77 +255,50 @@ async def update_ticket(
     print(f"[DEBUG] ticket_data: {ticket_data}")
 
     payload = {}
-    if ticket_data.title is not None:
-        payload["title"] = ticket_data.title
-    if ticket_data.description is not None:
-        payload["description"] = ticket_data.description
-    if ticket_data.assignee_id is not None:
-        payload["assignee"] = await id_to_username(ticket_data.assignee_id)
-    if ticket_data.category_id is not None:
-        payload["category"] = await id_to_name("categories", ticket_data.category_id)
-    if ticket_data.priority_id is not None:
-        payload["priority"] = await id_to_name("priorities", ticket_data.priority_id)
-    if ticket_data.status_id is not None:
-        payload["status"] = await id_to_name("statuses", ticket_data.status_id)
-    if ticket_data.due_date is not None:
-        payload["due_date"] = ticket_data.due_date
-    if ticket_data.assigned_group_id is not None:
-        payload["assigned_group"] = await id_to_group_name(ticket_data.assigned_group_id)
-    if not payload:
-        print("[DEBUG] No update data provided.")
-        raise HTTPException(status_code=400, detail="No update data provided.")
+    try:
+        if ticket_data.title is not None:
+            payload["title"] = ticket_data.title
+        if ticket_data.description is not None:
+            payload["description"] = ticket_data.description
+        if ticket_data.assignee_id is not None:
+            payload["assignee"] = await run_in_threadpool(_tts_client.id_to_username, ticket_data.assignee_id)
+        if ticket_data.category_id is not None:
+            payload["category"] = await run_in_threadpool(_tts_client.id_to_name, "categories", ticket_data.category_id)
+        if ticket_data.priority_id is not None:
+            payload["priority"] = await run_in_threadpool(_tts_client.id_to_name, "priorities", ticket_data.priority_id)
+        if ticket_data.status_id is not None:
+            payload["status"] = await run_in_threadpool(_tts_client.id_to_name, "statuses", ticket_data.status_id)
+        if ticket_data.due_date is not None:
+            payload["due_date"] = ticket_data.due_date
+        if ticket_data.assigned_group_id is not None:
+            payload["assigned_group"] = await run_in_threadpool(_tts_client.id_to_group_name, ticket_data.assigned_group_id)
+        if not payload:
+            print("[DEBUG] No update data provided.")
+            raise HTTPException(status_code=400, detail="No update data provided.")
+        print(f"[DEBUG] Payload to Django: {payload}")
+        # Update the ticket
+        result = await run_in_threadpool(_tts_client.update_ticket, ticket_id, payload)
+        if not result.get("ticket_id"):
+            print("[DEBUG] No ticket_id returned from TTS API.")
+            raise HTTPException(status_code=500, detail="No ticket_id returned from TTS API.")
+        # Fetch and return the full ticket details
+        ticket = await run_in_threadpool(_tts_client.get_ticket, ticket_id)
+        return normalize_ticket_fields(ticket)
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Error updating ticket: {e}")
 
-    print(f"[DEBUG] Payload to Django: {payload}")
-
-    target_url = f"{TTS_API_URL}edit/{ticket_id}/"
-    form_headers = headers.copy()
-    form_headers["Content-Type"] = "application/x-www-form-urlencoded"
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(target_url, data=payload, headers=form_headers)
-            print(f"[DEBUG] Django response status: {response.status_code}")
-            print(f"[DEBUG] Django response body: {response.text}")
-            response.raise_for_status()
-            result = response.json()
-            if not result.get("ticket_id"):
-                print("[DEBUG] No ticket_id returned from Django API.")
-                raise HTTPException(status_code=500, detail="No ticket_id returned from Django API.")
-            return await get_ticket(ticket_id)
-        except httpx.RequestError as exc:
-            print(f"[DEBUG] RequestError: {exc}")
-            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
-        except httpx.HTTPStatusError as exc:
-            print(f"[DEBUG] HTTPStatusError: {exc.response.status_code} - {exc.response.text}")
-            if exc.response.status_code == 404:
-                raise HTTPException(status_code=404, detail=f"Ticket with ID '{ticket_id}' not found in TTS.")
-            else:
-                detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
-                raise HTTPException(status_code=exc.response.status_code, detail=detail)
-
-# Add DELETE endpoint based on script
 @tts_app.delete("/tickets/{ticket_id}", status_code=204, summary="Delete a ticket by ID")
 async def delete_ticket(ticket_id: int = Path(..., description="The unique integer ID of the ticket to delete.")):
     """
-    Deletes a ticket from the external TTS (DELETE {TTS_API_URL}tickets/{id}/).
+    Deletes a ticket from the TTS API using TTSClient.
     """
-    # Construct target URL by appending to the base TTS_API_URL
-    target_url = f"{TTS_API_URL}tickets/{ticket_id}/"
-
-    async with httpx.AsyncClient() as client:
-        try:
-            # Use DELETE method as per script
-            response = await client.delete(target_url, headers=headers)
-            response.raise_for_status() # Check for errors, handle 404 specifically
-            # No content expected on success (204)
-            return None # Return None for 204 response
-        except httpx.RequestError as exc:
-            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 404:
-                 raise HTTPException(status_code=404, detail=f"Ticket with ID '{ticket_id}' not found in TTS.")
-            else:
-                detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
-                raise HTTPException(status_code=exc.response.status_code, detail=detail)
+    try:
+        await run_in_threadpool(_tts_client.delete_ticket, ticket_id)
+        return None
+    except Exception as e:
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=404, detail=f"Ticket with ID '{ticket_id}' not found in TTS.")
+        raise HTTPException(status_code=503, detail=f"Error deleting ticket: {e}")
 
 @tts_app.post("/tickets/{ticket_id}/comments", response_model=CommentResponse, status_code=201, summary="Add a comment to a ticket")
 async def add_comment(
@@ -575,26 +306,15 @@ async def add_comment(
     ticket_id: str = Path(..., description="The unique ID of the ticket to comment on.")
 ):
     """
-    Adds a comment to a specific ticket in /tickets/api/v1/add_comment/{ticket_id}/.
+    Adds a comment to a specific ticket using TTSClient.
     """
-    # Django expects 'comment' in POST data, not 'text'
-    payload = {"comment": comment_data.text}
-    target_url = f"{TTS_API_URL}add_comment/{ticket_id}/"
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(target_url, data=payload, headers=headers)
-            response.raise_for_status()
-            result = response.json()
-            # Return a minimal comment response (Django does not return full comment)
-            return CommentResponse(id=str(result.get("ticket_id", "")), text=comment_data.text)
-        except httpx.RequestError as exc:
-            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 404:
-                raise HTTPException(status_code=404, detail=f"Ticket with ID '{ticket_id}' not found in TTS.")
-            else:
-                detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
-                raise HTTPException(status_code=exc.response.status_code, detail=detail)
+    try:
+        result = await run_in_threadpool(_tts_client.add_comment, ticket_id, comment_data.text)
+        return CommentResponse(id=str(result.get("ticket_id", "")), text=comment_data.text)
+    except Exception as e:
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=404, detail=f"Ticket with ID '{ticket_id}' not found in TTS.")
+        raise HTTPException(status_code=503, detail=f"Error adding comment: {e}")
 
 # --- Endpoints for Related Entities (Users, Categories, etc.) ---
 
@@ -645,106 +365,87 @@ async def _list_related_items(item_type: str, response_model: Any, limit: int = 
 
 @tts_app.get("/users", response_model=PaginatedListResponse[UserListItem], summary="List all users")
 async def list_users(
-    # Query parameters for pagination
     limit: int = Query(50, ge=1, le=100, description="Maximum number of users to return."),
     offset: int = Query(0, ge=0, description="Number of users to skip for pagination.")
 ):
-    """Retrieves a paginated list of users from the external TTS (GET {TTS_API_URL}users/)."""
-    paginated_dict = await _list_related_items("users", UserListItem, limit=limit, offset=offset)
-    # Instantiate the generic response model using the processed dictionary
-    return PaginatedListResponse[UserListItem](**paginated_dict)
+    """Retrieves a paginated list of users from the TTS API using TTSClient."""
+    try:
+        paginated_dict = await run_in_threadpool(_tts_client.list_users, limit, offset)
+        return PaginatedListResponse[UserListItem](**paginated_dict)
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Error listing users: {e}")
 
 @tts_app.get("/categories", response_model=PaginatedListResponse[CategoryListItem], summary="List all categories")
 async def list_categories(
-    # Query parameters for pagination
     limit: int = Query(50, ge=1, le=100, description="Maximum number of categories to return."),
     offset: int = Query(0, ge=0, description="Number of categories to skip for pagination.")
 ):
-    """Retrieves a paginated list of categories from the external TTS (GET {TTS_API_URL}categories/)."""
-    paginated_dict = await _list_related_items("categories", CategoryListItem, limit=limit, offset=offset)
-    return PaginatedListResponse[CategoryListItem](**paginated_dict)
+    """Retrieves a paginated list of categories from the TTS API using TTSClient."""
+    try:
+        paginated_dict = await run_in_threadpool(_tts_client.list_categories, limit, offset)
+        return PaginatedListResponse[CategoryListItem](**paginated_dict)
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Error listing categories: {e}")
 
 @tts_app.get("/priorities", response_model=PaginatedListResponse[PriorityListItem], summary="List all priorities")
 async def list_priorities(
-    # Query parameters for pagination
     limit: int = Query(50, ge=1, le=100, description="Maximum number of priorities to return."),
     offset: int = Query(0, ge=0, description="Number of priorities to skip for pagination.")
 ):
-    """Retrieves a paginated list of priorities from the external TTS (GET {TTS_API_URL}priorities/)."""
-    paginated_dict = await _list_related_items("priorities", PriorityListItem, limit=limit, offset=offset)
-    return PaginatedListResponse[PriorityListItem](**paginated_dict)
+    """Retrieves a paginated list of priorities from the TTS API using TTSClient."""
+    try:
+        paginated_dict = await run_in_threadpool(_tts_client.list_priorities, limit, offset)
+        return PaginatedListResponse[PriorityListItem](**paginated_dict)
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Error listing priorities: {e}")
 
 @tts_app.get("/statuses", response_model=PaginatedListResponse[StatusListItem], summary="List all statuses")
 async def list_statuses(
-    # Query parameters for pagination
     limit: int = Query(50, ge=1, le=100, description="Maximum number of statuses to return."),
     offset: int = Query(0, ge=0, description="Number of statuses to skip for pagination.")
 ):
-    """Retrieves a paginated list of statuses from the external TTS (GET {TTS_API_URL}statuses/)."""
-    paginated_dict = await _list_related_items("statuses", StatusListItem, limit=limit, offset=offset)
-    return PaginatedListResponse[StatusListItem](**paginated_dict)
+    """Retrieves a paginated list of statuses from the TTS API using TTSClient."""
+    try:
+        paginated_dict = await run_in_threadpool(_tts_client.list_statuses, limit, offset)
+        return PaginatedListResponse[StatusListItem](**paginated_dict)
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Error listing statuses: {e}")
 
 # --- ADD: Profile Endpoints ---
 
 @tts_app.get("/profile", response_model=UserProfile, summary="Get current user profile")
 async def get_profile():
-    """Retrieves the profile of the currently authenticated user from the TTS backend."""
-    target_url = f"{TTS_API_URL}profile/" # Assuming API base URL ends with /v1/
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(target_url, headers=headers)
-            response.raise_for_status()
-            profile_data = response.json()
-            return UserProfile(**profile_data)
-        except httpx.RequestError as exc:
-            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
-        except httpx.HTTPStatusError as exc:
-            # Handle potential 401/403 if authentication fails
-            detail = f"TTS Error fetching profile: {exc.response.status_code} - {exc.response.text}"
-            raise HTTPException(status_code=exc.response.status_code, detail=detail)
+    """Retrieves the profile of the currently authenticated user from the TTS API using TTSClient."""
+    try:
+        profile_data = await run_in_threadpool(_tts_client.get_profile)
+        return UserProfile(**profile_data)
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Error fetching profile: {e}")
 
 @tts_app.put("/profile", response_model=UserProfile, summary="Update current user profile")
 async def update_profile(update_data: ProfileUpdateRequest):
-    """Updates the profile (email, first_name, last_name) of the currently authenticated user."""
-    target_url = f"{TTS_API_URL}profile/" 
+    """Updates the profile of the currently authenticated user using TTSClient."""
     payload = update_data.model_dump(exclude_unset=True)
-
     if not payload:
         raise HTTPException(status_code=400, detail="No profile update data provided.")
-
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.put(target_url, json=payload, headers=headers)
-            response.raise_for_status()
-            updated_profile_data = response.json()
-            return UserProfile(**updated_profile_data)
-        except httpx.RequestError as exc:
-            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
-        except httpx.HTTPStatusError as exc:
-            # Handle potential 400 for bad data, 401/403 for auth
-            detail = f"TTS Error updating profile: {exc.response.status_code} - {exc.response.text}"
-            raise HTTPException(status_code=exc.response.status_code, detail=detail)
+    try:
+        updated_profile_data = await run_in_threadpool(_tts_client.update_profile, payload)
+        return UserProfile(**updated_profile_data)
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Error updating profile: {e}")
 
 # --- ADD: User Detail Endpoint ---
 
 @tts_app.get("/users/{user_id}", response_model=UserProfile, summary="Get user by ID")
 async def get_user(user_id: int = Path(..., description="The ID of the user to retrieve.")):
-    """Retrieves details for a specific user by their ID from the TTS backend."""
-    target_url = f"{TTS_API_URL}users/{user_id}/"
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(target_url, headers=headers)
-            response.raise_for_status()
-            user_data = response.json()
-            return UserProfile(**user_data)
-        except httpx.RequestError as exc:
-            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 404:
-                raise HTTPException(status_code=404, detail=f"User with ID {user_id} not found.")
-            else:
-                detail = f"TTS Error fetching user {user_id}: {exc.response.status_code} - {exc.response.text}"
-                raise HTTPException(status_code=exc.response.status_code, detail=detail)
+    """Retrieves details for a specific user by their ID from the TTS API using TTSClient."""
+    try:
+        user_data = await run_in_threadpool(_tts_client.get_user, user_id)
+        return UserProfile(**user_data)
+    except Exception as e:
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=404, detail=f"User with ID {user_id} not found.")
+        raise HTTPException(status_code=503, detail=f"Error fetching user: {e}")
 
 # --- Health Check Endpoint ---
 @tts_app.get("/health", status_code=200, summary="Health check")
@@ -770,29 +471,18 @@ main_app.mount("/tts", tts_app)
 @tts_app.post("/tickets/{ticket_id}/close", response_model=TicketResponse, summary="Close a ticket by setting its status to 'Closed'")
 async def close_ticket(ticket_id: int = Path(..., description="The unique integer ID of the ticket to close.")):
     """
-    Sets the ticket's status to 'Closed' by updating the ticket with status name 'Closed'.
-    Sends data as application/x-www-form-urlencoded to match backend expectations.
+    Sets the ticket's status to 'Closed' using TTSClient.
     """
-    payload = {"status": "Closed"}
-    target_url = f"{TTS_API_URL}edit/{ticket_id}/"
-    form_headers = headers.copy()
-    form_headers["Content-Type"] = "application/x-www-form-urlencoded"
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(target_url, data=payload, headers=form_headers)
-            response.raise_for_status()
-            result = response.json()
-            if not result.get("ticket_id"):
-                raise HTTPException(status_code=500, detail="No ticket_id returned from Django API.")
-            return await get_ticket(ticket_id)
-        except httpx.RequestError as exc:
-            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 404:
-                raise HTTPException(status_code=404, detail=f"Ticket with ID '{ticket_id}' not found in TTS.")
-            else:
-                detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
-                raise HTTPException(status_code=exc.response.status_code, detail=detail)
+    try:
+        result = await run_in_threadpool(_tts_client.close_ticket, ticket_id)
+        if not result.get("ticket_id"):
+            raise HTTPException(status_code=500, detail="No ticket_id returned from TTS API.")
+        ticket = await run_in_threadpool(_tts_client.get_ticket, ticket_id)
+        return normalize_ticket_fields(ticket)
+    except Exception as e:
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=404, detail=f"Ticket with ID '{ticket_id}' not found in TTS.")
+        raise HTTPException(status_code=503, detail=f"Error closing ticket: {e}")
 
 # --- Batch Close Request Model ---
 class BatchCloseRequest(BaseModel):
@@ -804,20 +494,14 @@ class BatchCloseRequest(BaseModel):
 @tts_app.post("/tickets/batch_close", summary="Batch close tickets by IDs")
 async def batch_close_tickets(request: BatchCloseRequest):
     """
-    Closes multiple tickets by forwarding the list of IDs to the Django batch close API.
+    Closes multiple tickets by forwarding the list of IDs to the TTS API using TTSClient.
     Returns a summary of closed and failed ticket IDs.
     """
-    target_url = f"{TTS_API_URL}batch_close/"
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(target_url, json=request.dict(), headers=headers)
-            response.raise_for_status()
-            return response.json()
-        except httpx.RequestError as exc:
-            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
-        except httpx.HTTPStatusError as exc:
-            detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
-            raise HTTPException(status_code=exc.response.status_code, detail=detail)
+    try:
+        result = await run_in_threadpool(_tts_client.batch_close_tickets, request.ticket_ids)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Error batch closing tickets: {e}")
 
 # --- List Groups Endpoint ---
 class GroupListItem(BaseModel):
@@ -829,132 +513,90 @@ async def list_groups(
     limit: int = Query(50, ge=1, le=100, description="Maximum number of groups to return."),
     offset: int = Query(0, ge=0, description="Number of groups to skip for pagination.")
 ):
-    """Retrieves a paginated list of groups from the external TTS (GET {TTS_API_URL}groups/)."""
-    paginated_dict = await _list_related_items("groups", GroupListItem, limit=limit, offset=offset)
-    return PaginatedListResponse[GroupListItem](**paginated_dict)
+    """Retrieves a paginated list of groups from the TTS API using TTSClient."""
+    try:
+        paginated_dict = await run_in_threadpool(_tts_client.list_groups, limit, offset)
+        return PaginatedListResponse[GroupListItem](**paginated_dict)
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Error listing groups: {e}")
 
 # API Endpoints for Summaries
 @tts_app.get("/summaries", response_model=List[SummaryResponse], summary="List all summaries")
 async def list_summaries(archived: Optional[bool] = Query(None, description="Filter summaries by archived status.")):
     """
-    Retrieves a list of summaries from the Django backend.
-    Can be filtered by `archived` status.
+    Retrieves a list of summaries from the TTS API using TTSClient.
     """
-    target_url = f"{TTS_API_URL}summaries/"
-    params = {}
-    if archived is not None:
-        params['archived'] = str(archived).lower()
-
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(target_url, headers=headers, params=params)
-            response.raise_for_status()
-            data = response.json()
-            return data.get('summaries', [])
-        except httpx.RequestError as exc:
-            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
-        except httpx.HTTPStatusError as exc:
-            detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
-            raise HTTPException(status_code=exc.response.status_code, detail=detail)
+    try:
+        data = await run_in_threadpool(_tts_client.list_summaries, archived)
+        return data.get('summaries', [])
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Error listing summaries: {e}")
 
 @tts_app.post("/summaries", response_model=SummaryResponse, status_code=201, summary="Create a new summary")
 async def create_summary(summary_data: SummaryCreateRequest):
     """
-    Creates a new summary in the Django backend.
+    Creates a new summary in the TTS API using TTSClient.
     """
-    target_url = f"{TTS_API_URL}summaries/"
-    payload = summary_data.model_dump()
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(target_url, json=payload, headers=headers)
-            response.raise_for_status()
-            created_summary_info = response.json()
-            summary_id = created_summary_info.get("summary_id")
-            if not summary_id:
-                raise HTTPException(status_code=500, detail="Summary created but no ID returned.")
-            return await get_summary(summary_id)
-        except httpx.RequestError as exc:
-            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
-        except httpx.HTTPStatusError as exc:
-            detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
-            raise HTTPException(status_code=exc.response.status_code, detail=detail)
+    try:
+        result = await run_in_threadpool(_tts_client.create_summary, summary_data.model_dump())
+        summary_id = result.get("summary_id")
+        if not summary_id:
+            raise HTTPException(status_code=500, detail="Summary created but no ID returned.")
+        summary = await run_in_threadpool(_tts_client.get_summary, summary_id)
+        return summary
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Error creating summary: {e}")
 
 @tts_app.get("/summaries/{summary_id}", response_model=SummaryResponse, summary="Get a specific summary by ID")
 async def get_summary(summary_id: int):
     """
-    Retrieves details for a single summary.
+    Retrieves details for a single summary from the TTS API using TTSClient.
     """
-    target_url = f"{TTS_API_URL}summaries/{summary_id}/"
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(target_url, headers=headers)
-            response.raise_for_status()
-            return response.json()
-        except httpx.RequestError as exc:
-            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 404:
-                raise HTTPException(status_code=404, detail=f"Summary with ID '{summary_id}' not found in TTS.")
-            else:
-                detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
-                raise HTTPException(status_code=exc.response.status_code, detail=detail)
+    try:
+        summary = await run_in_threadpool(_tts_client.get_summary, summary_id)
+        return summary
+    except Exception as e:
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=404, detail=f"Summary with ID '{summary_id}' not found in TTS.")
+        raise HTTPException(status_code=503, detail=f"Error fetching summary: {e}")
 
 @tts_app.put("/summaries/{summary_id}", response_model=SummaryResponse, summary="Update an existing summary")
 async def update_summary(summary_id: int, summary_data: SummaryUpdateRequest):
     """
-    Updates an existing summary.
+    Updates an existing summary in the TTS API using TTSClient.
     """
-    target_url = f"{TTS_API_URL}summaries/{summary_id}/"
     payload = summary_data.model_dump(exclude_unset=True)
     if not payload:
         raise HTTPException(status_code=400, detail="No update data provided.")
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.put(target_url, json=payload, headers=headers)
-            response.raise_for_status()
-            return await get_summary(summary_id)
-        except httpx.RequestError as exc:
-            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 404:
-                raise HTTPException(status_code=404, detail=f"Summary with ID '{summary_id}' not found in TTS.")
-            else:
-                detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
-                raise HTTPException(status_code=exc.response.status_code, detail=detail)
+    try:
+        await run_in_threadpool(_tts_client.update_summary, summary_id, payload)
+        summary = await run_in_threadpool(_tts_client.get_summary, summary_id)
+        return summary
+    except Exception as e:
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=404, detail=f"Summary with ID '{summary_id}' not found in TTS.")
+        raise HTTPException(status_code=503, detail=f"Error updating summary: {e}")
 
 @tts_app.delete("/summaries/{summary_id}", status_code=204, summary="Delete a summary by ID")
 async def delete_summary(summary_id: int):
     """
-    Deletes a summary by its ID.
+    Deletes a summary by its ID using TTSClient.
     """
-    target_url = f"{TTS_API_URL}summaries/{summary_id}/"
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.delete(target_url, headers=headers)
-            response.raise_for_status()
-            return None
-        except httpx.RequestError as exc:
-            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 404:
-                raise HTTPException(status_code=404, detail=f"Summary with ID '{summary_id}' not found in TTS.")
-            else:
-                detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
-                raise HTTPException(status_code=exc.response.status_code, detail=detail)
+    try:
+        await run_in_threadpool(_tts_client.delete_summary, summary_id)
+        return None
+    except Exception as e:
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=404, detail=f"Summary with ID '{summary_id}' not found in TTS.")
+        raise HTTPException(status_code=503, detail=f"Error deleting summary: {e}")
 
 @tts_app.post("/summaries/archive_all", summary="Archive all unarchived summaries")
 async def archive_all_summaries():
     """
-    Sends a request to the backend to archive all summaries that are not currently archived.
+    Sends a request to the TTS API to archive all summaries that are not currently archived using TTSClient.
     """
-    target_url = f"{TTS_API_URL}summaries/archive_all/"
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(target_url, headers=headers)
-            response.raise_for_status()
-            return response.json()
-        except httpx.RequestError as exc:
-            raise HTTPException(status_code=503, detail=f"Error connecting to TTS: {exc}")
-        except httpx.HTTPStatusError as exc:
-            detail = f"TTS Error: {exc.response.status_code} - {exc.response.text}"
-            raise HTTPException(status_code=exc.response.status_code, detail=detail) 
+    try:
+        result = await run_in_threadpool(_tts_client.archive_all_summaries)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Error archiving all summaries: {e}") 
