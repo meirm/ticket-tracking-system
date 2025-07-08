@@ -118,20 +118,12 @@ class TTSClient:
             print(f"[ERROR] Failed to list related items for {item_type}: {e}")
             raise
 
-    def search_tickets(self, q: str, scope: str = None, status: str = None, priority: str = None, from_date: str = None, to_date: str = None, due_date: str = None, assignee: str = None, issuer: str = None) -> dict:
+    def search_tickets(self, params: Dict[str, Any]) -> dict:
         """
         Search tickets by query and filters. Returns dict with 'tickets' key.
+        Expects params dict with keys: q, scope, status, priority, from_date, to_date, due_date, assignee, issuer, limit, offset
         """
         url = f"{self.base_url}search/"
-        params = {"q": q}
-        if scope: params["scope"] = scope
-        if status: params["status"] = status
-        if priority: params["priority"] = priority
-        if from_date: params["from_date"] = from_date
-        if to_date: params["to_date"] = to_date
-        if due_date: params["due_date"] = due_date
-        if assignee: params["assignee"] = assignee
-        if issuer: params["issuer"] = issuer
         try:
             with httpx.Client() as client:
                 response = client.get(url, headers=self.headers, params=params)
@@ -333,17 +325,18 @@ class TTSClient:
             print(f"[ERROR] Failed to update profile: {e}")
             raise
 
-    def list_summaries(self, archived: bool = None) -> dict:
+    def list_summaries(self, params: Optional[Dict[str, Any]] = None) -> dict:
         """
         List all summaries, optionally filtered by archived status.
         """
         url = f"{self.base_url}summaries/"
-        params = {}
-        if archived is not None:
-            params['archived'] = str(archived).lower()
+        query_params = {}
+        if params:
+            if 'archived' in params and params['archived'] is not None:
+                query_params['archived'] = str(params['archived']).lower()
         try:
             with httpx.Client() as client:
-                response = client.get(url, headers=self.headers, params=params)
+                response = client.get(url, headers=self.headers, params=query_params)
                 response.raise_for_status()
                 return response.json()
         except Exception as e:
@@ -419,7 +412,60 @@ class TTSClient:
             print(f"[ERROR] Failed to archive all summaries: {e}")
             raise
 
-# Add more methods as needed for other TTS operations (get_ticket, create_ticket, etc.)
+    def get_user_groups(self, username: str) -> dict:
+        """
+        Get all groups for a specific user.
+        """
+        # Extract base URL from tickets URL
+        base_url = self.base_url.split('/tickets')[0]
+        url = urljoin(base_url, '/accounts/api_user_groups/')
+        headers = {"X-API-AUTH": self.headers["X-API-AUTH"]}
+        params = {"username": username}
+        
+        try:
+            with httpx.Client() as client:
+                response = client.get(url, headers=headers, params=params)
+                if response.status_code == 404:
+                    return {"error": f"User '{username}' not found."}
+                response.raise_for_status()
+                return response.json()
+        except Exception as e:
+            print(f"[ERROR] Failed to get groups for user {username}: {e}")
+            raise
+
+    def get_group_members(self, group_name: str) -> dict:
+        """
+        Get all members of a specific group.
+        """
+        # Extract base URL from tickets URL
+        base_url = self.base_url.split('/tickets')[0]
+        url = urljoin(base_url, '/accounts/api_group_members/')
+        headers = {"X-API-AUTH": self.headers["X-API-AUTH"]}
+        params = {"group": group_name}
+        
+        try:
+            with httpx.Client() as client:
+                response = client.get(url, headers=headers, params=params)
+                if response.status_code == 404:
+                    return {"error": f"Group '{group_name}' not found."}
+                response.raise_for_status()
+                return response.json()
+        except Exception as e:
+            print(f"[ERROR] Failed to get members for group {group_name}: {e}")
+            raise
+
+    def health_check(self) -> dict:
+        """
+        Basic health check for the TTS system.
+        """
+        try:
+            # Simple health check by trying to list tickets with minimal params
+            result = self.list_tickets({"limit": 1})
+            return {"status": "ok", "message": "TTS system is healthy"}
+        except Exception as e:
+            return {"status": "error", "message": f"TTS system health check failed: {e}"}
+
+# Add more methods as needed for other TTS operations
 
 # Example usage (for CLI):
 # client = TTSClient(base_url="http://localhost:8000/tickets/api/v1/", api_token="your_token")

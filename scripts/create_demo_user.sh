@@ -4,7 +4,7 @@
 # Requires: curl, a valid superuser API key, and the API server running
 
 API_URL="http://localhost:8000/accounts/api_create_user/"
-SUPERUSER_API_KEY="43b098b8681dc116c143eda335f16c563758884c6f9056264e9d48a29599a7b5"
+SUPERUSER_API_KEY="test_token"
 
 # User details
 USERNAME="demo"
