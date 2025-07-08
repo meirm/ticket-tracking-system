@@ -143,3 +143,29 @@ python tts_mcp_server.py
 # Run the test suite
 python test_mcp_server.py
 ```
+
+### Claude Configuration for MCP Server
+To configure Claude to use the TTS MCP server, add this configuration to your Claude settings:
+
+```json
+{
+  "mcpServers": {
+    "tts": {
+      "command": "python",
+      "args": ["/path/to/tts_tool/tts_mcp_server.py"],
+      "env": {
+        "TTS_API_URL": "https://your-tts-api-url/tickets/api/v1/",
+        "TTS_API_TOKEN": "your-api-token"
+      }
+    }
+  }
+}
+```
+
+**Configuration Notes:**
+- Replace `/path/to/tts_tool/tts_mcp_server.py` with the full absolute path to your tts_mcp_server.py file
+- Replace `https://your-tts-api-url/tickets/api/v1/` with your actual TTS API URL
+- Replace `your-api-token` with your actual API token
+- Ensure the TTS API URL ends with `/tickets/api/v1/`
+- The MCP server will automatically load environment variables from `.env` file if present
+- Use absolute paths in the args array rather than relative paths with cwd
