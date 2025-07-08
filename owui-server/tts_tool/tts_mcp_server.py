@@ -491,17 +491,28 @@ def get_profile() -> Dict[str, Any]:
     """
     return tts_client.get_profile()
 
-# --- Helper Functions ---
 
-def run_server():
-    """Run the MCP server."""
-    try:
-        mcp.run()
-    except KeyboardInterrupt:
-        print("\nShutting down TTS MCP server...")
-    except Exception as e:
-        print(f"Error running server: {e}")
-        raise
-
+# --- Main entry point ---
 if __name__ == "__main__":
-    run_server()
+    import click
+    @click.command()
+    @click.option("--transport", type=click.Choice(["stdio", "sse", "http"]), default="stdio")
+    @click.option("--host", type=str, default="0.0.0.0")
+    @click.option("--port", type=int, default=8000)
+    def run_mcp_server(transport: str, host: str, port: int):
+        try:
+            if transport == "sse":
+                mcp.run(transport="sse")
+            elif transport == "http":
+                mcp.run(transport="http", host=host, port=port, path="/mcp")
+            elif transport == "stdio":
+                mcp.run(transport="stdio")
+            else:
+                print(f"Invalid transport: {transport}")
+                exit(1)
+        except KeyboardInterrupt:
+            print("\nShutting down TTS MCP server...")
+        except Exception as e:
+            print(f"Error running server: {e}")
+            raise
+    run_mcp_server() 
